@@ -8,6 +8,12 @@ A two-sided client acquisition system for a DMV-area web designer:
 | `dashboard.html` | **You** (private — `noindex`, don't link to it) | Lead engine pulling **live data**: DC businesses licensed in the last N days + DMV businesses with no website on record. Pipeline tracker, outreach generator, CSV export. |
 | `config.js` | You | Name, brand, email, pricing, Formspree ID — edit once, both pages update. |
 
+## Mockup Studio (dashboard tab)
+
+Generates a client-ready website mockup with Claude and publishes it to GitHub Pages in one click — the engine behind the demo-first outreach strategy. Enter a brief (name, type, description, requested features), optionally a logo + up to 3 photos (Claude matches the logo's palette and uses the photos in the design), and it streams back a complete single-file site built to a baked-in design system (distinctive typography, accessible contrast, scroll animations, mobile-first, conversion-focused sections chosen per business type). Preview in-tab, then Publish creates the repo, pushes `index.html` + assets, enables Pages, waits for the build, and files the mockup under Completed Sites.
+
+One-time setup in the tab's "Keys & model" panel: an Anthropic API key ([console.anthropic.com](https://console.anthropic.com)) and a fine-grained GitHub token with Administration + Contents + Pages read/write. Keys live only in your browser's localStorage. Default model is Claude Opus 4.8; Fable 5 (with automatic Opus fallback on refusals) and Sonnet 5 are selectable. A full generation costs roughly $0.50–$2 in API usage depending on model and length.
+
 ## Data sources (all free, no API keys)
 
 - **New DC businesses** — official DLCP Basic Business License feed

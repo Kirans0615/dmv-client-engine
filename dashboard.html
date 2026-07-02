@@ -146,6 +146,8 @@
     <g id="i-trash"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></g>
     <g id="i-x"><path d="M18 6 6 18M6 6l12 12"/></g>
     <g id="i-zap"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></g>
+    <g id="i-wand"><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M15 9h.01M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5"/></g>
+    <g id="i-rocket"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09zM12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></g>
   </defs>
 </svg>
 
@@ -161,6 +163,7 @@
   <button class="tab active" data-pane="dc"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-zap"/></svg>New DC Licenses</button>
   <button class="tab" data-pane="nosite"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg>No-Website Businesses</button>
   <button class="tab" data-pane="pipeline"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-board"/></svg>My Pipeline</button>
+  <button class="tab" data-pane="studio"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Mockup Studio</button>
   <button class="tab" data-pane="sites"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-case"/></svg>Completed Sites</button>
   <button class="tab" data-pane="sources"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-link"/></svg>More Sources</button>
 </nav>
@@ -237,6 +240,67 @@
     </div>
     <p class="note" style="margin-top:-6px">Your pipeline lives in this browser. Moving to another computer? <b>Backup</b> here, <b>Restore</b> there — everything carries over.</p>
     <div class="kanban" id="kanban"></div>
+  </section>
+
+  <!-- ============ TAB: MOCKUP STUDIO ============ -->
+  <section class="pane" id="pane-studio">
+    <p class="note"><b>Generate a portfolio-grade website mockup with Claude, then publish it to GitHub Pages in one click.</b>
+    Fill in the brief, drop in a logo and photos, and Claude designs and builds a complete single-page site —
+    then this tab creates the repo, pushes it, enables Pages, and files it under Completed Sites automatically.</p>
+
+    <details id="msSettings" style="margin-bottom:20px;background:var(--paper);border:1px solid var(--line-soft);border-radius:12px;padding:16px 20px">
+      <summary style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);cursor:pointer">Keys & model (one-time setup)</summary>
+      <div class="controls" style="margin:14px 0 0">
+        <div class="field"><label for="msAnthropicKey">Anthropic API key</label><input type="password" id="msAnthropicKey" placeholder="sk-ant-…" style="width:250px"></div>
+        <div class="field"><label for="msGithubToken">GitHub token (repo scope)</label><input type="password" id="msGithubToken" placeholder="github_pat_… or ghp_…" style="width:250px"></div>
+        <div class="field"><label for="msModel">Model</label>
+          <select id="msModel">
+            <option value="claude-opus-4-8" selected>Claude Opus 4.8 (recommended)</option>
+            <option value="claude-fable-5">Claude Fable 5 (max capability, higher cost)</option>
+            <option value="claude-sonnet-5">Claude Sonnet 5 (faster, cheaper)</option>
+          </select>
+        </div>
+        <button class="btn secondary" id="msSaveKeys">Save keys</button>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:10px">Keys are stored only in this browser (localStorage) and sent only to api.anthropic.com / api.github.com.
+      Get an API key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>; create a
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">fine-grained GitHub token</a> with Repository access → All repositories, and permissions → Administration + Contents + Pages (Read and write).</p>
+    </details>
+
+    <div class="controls">
+      <div class="field"><label for="msName">Business name</label><input type="text" id="msName" placeholder="e.g. Haydee's Restaurant" style="width:210px"></div>
+      <div class="field"><label for="msType">Business type</label><input type="text" id="msType" placeholder="e.g. Salvadoran restaurant" style="width:190px"></div>
+      <div class="field"><label for="msLoc">Location</label><input type="text" id="msLoc" placeholder="e.g. Mount Pleasant, DC" style="width:180px"></div>
+      <div class="field"><label for="msContact">Phone / email (shown on site)</label><input type="text" id="msContact" placeholder="(202) 555-0100" style="width:190px"></div>
+    </div>
+    <div class="controls">
+      <div class="field" style="flex:1;min-width:320px"><label for="msDesc">Brief description — what they do, what makes them special</label>
+        <textarea id="msDesc" rows="3" placeholder="Family-run Salvadoran restaurant, 20 years in Mount Pleasant, famous for pupusas and weekend brunch…" style="width:100%"></textarea></div>
+    </div>
+    <div class="controls">
+      <div class="field" style="flex:1;min-width:320px"><label for="msFeatures">Specific features you want (Claude will add more it judges right for this business)</label>
+        <textarea id="msFeatures" rows="2" placeholder="Menu section, online-order button linking to DoorDash, photo gallery, Spanish/English hint…" style="width:100%"></textarea></div>
+    </div>
+    <div class="controls">
+      <div class="field"><label for="msLogo">Logo (optional — Claude matches its colors)</label><input type="file" id="msLogo" accept="image/*"></div>
+      <div class="field"><label for="msPhotos">Photos (optional, up to 3 — used in the design)</label><input type="file" id="msPhotos" accept="image/*" multiple></div>
+      <div class="field"><label for="msStyle">Style hints (optional)</label><input type="text" id="msStyle" placeholder="warm, modern, bold…" style="width:170px"></div>
+      <button class="btn" id="msGenerate"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate mockup</button>
+    </div>
+
+    <div class="msg" id="msMsg"></div>
+    <div id="msProgress" style="display:none;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+
+    <div id="msResult" style="display:none">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <span class="pill client" id="msDoneBadge">Mockup ready</span>
+        <button class="btn" id="msPublish"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-rocket"/></svg>Publish to GitHub Pages</button>
+        <button class="btn secondary" id="msRegenerate"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Regenerate</button>
+        <button class="btn secondary" id="msDownload"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-down"/></svg>Download HTML</button>
+        <span id="msPublishStatus" style="font-family:var(--mono);font-size:12px;color:var(--muted)"></span>
+      </div>
+      <iframe id="msPreview" style="width:100%;height:640px;border:1px solid var(--line);border-radius:12px;background:#fff" title="Mockup preview"></iframe>
+    </div>
   </section>
 
   <!-- ============ TAB 4: COMPLETED SITES ============ -->
@@ -594,6 +658,239 @@ function markContacted(id){
 }
 function closeModal(){ document.getElementById("overlay").classList.remove("open"); }
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
+
+/* ================= MOCKUP STUDIO ================= */
+const MS_KEY = "dce_studio_v1";
+let msCfg = JSON.parse(localStorage.getItem(MS_KEY) || "{}");
+(function initStudio(){
+  if(msCfg.anthropicKey) document.getElementById("msAnthropicKey").value = msCfg.anthropicKey;
+  if(msCfg.githubToken) document.getElementById("msGithubToken").value = msCfg.githubToken;
+  if(msCfg.model) document.getElementById("msModel").value = msCfg.model;
+  if(!msCfg.anthropicKey) document.getElementById("msSettings").open = true;
+})();
+document.getElementById("msSaveKeys").addEventListener("click", ()=>{
+  msCfg = {
+    anthropicKey: document.getElementById("msAnthropicKey").value.trim(),
+    githubToken: document.getElementById("msGithubToken").value.trim(),
+    model: document.getElementById("msModel").value,
+  };
+  localStorage.setItem(MS_KEY, JSON.stringify(msCfg));
+  showMsg(document.getElementById("msMsg"), "Keys saved in this browser.", "info");
+});
+
+// The design intelligence baked into every generation — distilled from professional
+// UI/UX practice so a short brief still produces a portfolio-grade result.
+const MS_SYSTEM = `You are an elite web designer-developer producing a client-ready website mockup for a real small business. The mockup is sales material: the business owner will see it and decide whether to hire the designer, so it must feel custom-made, expensive, and specific to THIS business — never like a template.
+
+OUTPUT CONTRACT
+Return ONLY a complete single-file HTML document (starting with <!DOCTYPE html>). No markdown fences, no commentary before or after. Everything (CSS, JS) inline in that one file. If image assets were provided, reference them by the exact relative paths given in the brief (e.g. assets/logo.png) — never base64 them into the HTML.
+
+DESIGN QUALITY BAR
+- NEVER use generic AI-generated aesthetics: overused font families (Inter, Roboto, Arial, system fonts), cliched color schemes (particularly purple gradients on white or dark backgrounds), predictable layouts, cookie-cutter design lacking context-specific character. Use distinctive Google Fonts (loaded via fonts.googleapis.com) with a real display/body pairing, a cohesive palette derived from the business's industry and logo, and micro-interactions.
+- If a logo image is provided, extract its palette and build the site's color system around it.
+- Design system discipline: define CSS custom properties for colors, spacing (4/8px rhythm), radii, and type scale; use them consistently. Body text ≥16px, line-height 1.5–1.7, contrast ≥4.5:1, visible :focus-visible states, semantic HTML (header/nav/main/section/footer, one h1), alt text on images, aria-labels on icon-only controls.
+- Motion: tasteful and purposeful. Use IntersectionObserver reveal-on-scroll (translateY+fade, 150–400ms, ease-out, staggered 40-80ms), subtle hover states (scale 1.02–1.05 or shadow lift), a scroll-aware sticky nav. Respect prefers-reduced-motion (disable transforms). No scroll-jacking.
+- Mobile-first responsive: fluid clamp() type, single column under 720px, hamburger nav on mobile (working, accessible), no horizontal scroll, touch targets ≥44px.
+
+SITE STRUCTURE (adapt to the business — think like a conversion strategist)
+Hero with a specific, benefit-led headline (never "Welcome to X"), strong CTA, and the provided imagery used confidently (full-bleed, duotone overlay, or asymmetric layout — pick what suits the brand). Then 4–7 sections chosen for THIS business type (e.g. restaurant: signature dishes/menu, story, gallery, hours+map+contact; trades: services, before/after, trust signals, quote form; salon: services+prices, stylists, booking CTA). Include social proof (invent 2-3 plausible testimonials with first names), an about/story section using the brief's details, and a contact/footer with the real phone/email/address provided, business hours, and a prominent final CTA. Add the smart features the brief requests AND the ones you judge this business needs (sticky call button on mobile for service businesses, menu tabs for restaurants, FAQ for trades, etc.). Forms should be visually complete but use mailto: or tel: actions — this is a mockup.
+
+CONTENT
+Write real, specific copy from the brief — confident, warm, concrete, zero lorem ipsum, zero placeholder text. Invent plausible details sparingly where the brief is silent (menu item names, service names) and keep them realistic for the location. If photos are provided, use ALL of them meaningfully. If none are provided, build the design around color, typography and CSS composition (gradients, patterns, shapes) — do NOT hotlink stock photos.
+
+Include a <title> and meta description, and a tiny footer line: "Website mockup by ${"Kiran Sen"} · ${"kirans0615@gmail.com"}".`;
+
+let msMockup = null; // {html, assets:[{path, b64, mediaType}]}
+
+async function msFileToAsset(file, path, maxDim){
+  const dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+  const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=dataUrl; });
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width*scale); canvas.height = Math.round(img.height*scale);
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  const isPng = file.type === "image/png" || file.type === "image/svg+xml";
+  const mediaType = isPng ? "image/png" : "image/jpeg";
+  const out = canvas.toDataURL(mediaType, 0.85);
+  return { path, mediaType, b64: out.split(",")[1] };
+}
+
+document.getElementById("msGenerate").addEventListener("click", msGenerate);
+document.getElementById("msRegenerate").addEventListener("click", msGenerate);
+async function msGenerate(){
+  const msg = document.getElementById("msMsg"), prog = document.getElementById("msProgress"),
+        btn = document.getElementById("msGenerate");
+  hideMsg(msg);
+  if(!msCfg.anthropicKey){ document.getElementById("msSettings").open = true; showMsg(msg, "Add your Anthropic API key first (Keys & model).", "err"); return; }
+  const name = document.getElementById("msName").value.trim();
+  const type = document.getElementById("msType").value.trim();
+  if(!name || !type){ showMsg(msg, "Business name and type are required.", "err"); return; }
+  const loc = document.getElementById("msLoc").value.trim();
+  const contact = document.getElementById("msContact").value.trim();
+  const desc = document.getElementById("msDesc").value.trim();
+  const features = document.getElementById("msFeatures").value.trim();
+  const style = document.getElementById("msStyle").value.trim();
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Designing…';
+  document.getElementById("msResult").style.display = "none";
+  prog.style.display = "block"; prog.textContent = "Preparing brief…";
+  try{
+    // assets
+    const assets = [];
+    const logoFile = document.getElementById("msLogo").files[0];
+    if(logoFile) assets.push(await msFileToAsset(logoFile, "assets/logo.png", 800));
+    const photos = [...document.getElementById("msPhotos").files].slice(0,3);
+    for(let i=0;i<photos.length;i++) assets.push(await msFileToAsset(photos[i], `assets/photo${i+1}.jpg`, 1400));
+
+    const brief = [
+      `Business: ${name} — ${type}${loc?`, in ${loc}`:""}.`,
+      contact ? `Contact to show on the site: ${contact}` : "No contact info provided — use tasteful placeholders like (202) 555-0100.",
+      desc ? `About them: ${desc}` : "",
+      features ? `Requested features: ${features}` : "No specific features requested — choose the right ones for this business.",
+      style ? `Style hints from the designer: ${style}` : "",
+      assets.length ? `Provided image assets (reference by these exact paths): ${assets.map(a=>a.path).join(", ")}. The first image shown below is ${logoFile?"the LOGO":"a photo"}; the rest are photos.` : "No images provided.",
+      "Build the complete mockup now.",
+    ].filter(Boolean).join("\n");
+
+    const content = [];
+    for(const a of assets) content.push({type:"image", source:{type:"base64", media_type:a.mediaType, data:a.b64}});
+    content.push({type:"text", text:brief});
+
+    const model = msCfg.model || "claude-opus-4-8";
+    const body = { model, max_tokens: 64000, stream: true, system: MS_SYSTEM,
+      output_config: {effort: "high"}, messages: [{role:"user", content}] };
+    const headers = { "content-type":"application/json", "x-api-key": msCfg.anthropicKey,
+      "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" };
+    if(model === "claude-opus-4-8" || model === "claude-sonnet-5") body.thinking = {type:"adaptive"};
+    if(model === "claude-fable-5"){ // opt into the recommended refusal fallback
+      headers["anthropic-beta"] = "server-side-fallback-2026-06-01";
+      body.fallbacks = [{model:"claude-opus-4-8"}];
+    }
+
+    prog.textContent = "Claude is designing… (this can take a few minutes for a high-quality build)";
+    const r = await fetch("https://api.anthropic.com/v1/messages", {method:"POST", headers, body:JSON.stringify(body)});
+    if(!r.ok){
+      const errBody = await r.json().catch(()=>({}));
+      const em = (errBody.error && errBody.error.message) || ("HTTP " + r.status);
+      throw new Error(r.status===401 ? "Invalid Anthropic API key." : r.status===429 ? "Rate limited by the API — wait a minute and retry." : em);
+    }
+    // parse the SSE stream
+    let html = "", stopReason = null, thinkingDots = 0;
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split("\n"); buf = lines.pop();
+      for(const line of lines){
+        if(!line.startsWith("data:")) continue;
+        let ev; try{ ev = JSON.parse(line.slice(5)); }catch(_){ continue; }
+        if(ev.type === "content_block_delta"){
+          if(ev.delta.type === "text_delta"){ html += ev.delta.text; prog.textContent = `Building… ${html.length.toLocaleString()} characters written`; }
+          else if(ev.delta.type === "thinking_delta"){ thinkingDots++; prog.textContent = "Thinking through the design" + ".".repeat(1 + thinkingDots % 3); }
+        }
+        else if(ev.type === "message_delta" && ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
+        else if(ev.type === "error") throw new Error(ev.error && ev.error.message || "stream error");
+      }
+    }
+    if(stopReason === "refusal") throw new Error("The model declined this request — adjust the brief and retry.");
+    if(stopReason === "max_tokens") showMsg(msg, "Output hit the length limit — the page may be truncated at the very end. Check the preview; regenerate if needed.", "err");
+    // strip markdown fences if present, isolate the document
+    html = html.replace(/^\s*```(?:html)?\s*/i, "").replace(/\s*```\s*$/, "");
+    const docStart = html.search(/<!doctype html/i);
+    if(docStart > 0) html = html.slice(docStart);
+    if(!/<html[\s>]/i.test(html)) throw new Error("The response didn't contain a complete HTML document — retry.");
+
+    msMockup = { html, assets, name, type };
+    // preview: swap asset paths for data URIs
+    let previewHtml = html;
+    for(const a of assets) previewHtml = previewHtml.split(a.path).join(`data:${a.mediaType};base64,${a.b64}`);
+    document.getElementById("msPreview").srcdoc = previewHtml;
+    document.getElementById("msResult").style.display = "block";
+    document.getElementById("msPublishStatus").textContent = "";
+    prog.style.display = "none";
+    if(stopReason !== "max_tokens") showMsg(msg, `Mockup for ${name} ready — review the preview, then publish or regenerate.`, "info");
+  }catch(e){
+    prog.style.display = "none";
+    showMsg(msg, "Generation failed: " + e.message, "err");
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate mockup';
+  }
+}
+
+document.getElementById("msDownload").addEventListener("click", ()=>{
+  if(!msMockup) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([msMockup.html], {type:"text/html"}));
+  a.download = (msMockup.name || "mockup").toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-mockup.html";
+  a.click();
+});
+
+async function ghApi(path, opts={}){
+  const r = await fetch("https://api.github.com" + path, Object.assign({}, opts, {
+    headers: Object.assign({ "Authorization": "Bearer " + msCfg.githubToken,
+      "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" }, opts.headers || {}),
+  }));
+  if(!r.ok && r.status !== 409){
+    const b = await r.json().catch(()=>({}));
+    throw new Error(`GitHub ${r.status}: ${(b.message||"")} ${path}`);
+  }
+  return r.status === 204 ? {} : r.json().catch(()=>({}));
+}
+const textToB64 = s => btoa(unescape(encodeURIComponent(s)));
+
+document.getElementById("msPublish").addEventListener("click", async ()=>{
+  const msg = document.getElementById("msMsg"), status = document.getElementById("msPublishStatus"),
+        btn = document.getElementById("msPublish");
+  hideMsg(msg);
+  if(!msMockup) return;
+  if(!msCfg.githubToken){ document.getElementById("msSettings").open = true; showMsg(msg, "Add a GitHub token first (Keys & model).", "err"); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Publishing…';
+  try{
+    const login = (await ghApi("/user")).login;
+    let slug = msMockup.name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") + "-mockup";
+    status.textContent = "Creating repo…";
+    let repo;
+    try{
+      repo = await ghApi("/user/repos", {method:"POST", body: JSON.stringify({
+        name: slug, description: `Website mockup for ${msMockup.name} — generated by DMV Client Engine`, auto_init: false })});
+      if(!repo.name){ slug = slug + "-" + Math.floor(Math.random()*900+100);
+        repo = await ghApi("/user/repos", {method:"POST", body: JSON.stringify({ name: slug, auto_init: false })}); }
+    }catch(e){ // name may exist — retry with suffix
+      slug = slug + "-" + Math.floor(Math.random()*900+100);
+      repo = await ghApi("/user/repos", {method:"POST", body: JSON.stringify({ name: slug, auto_init: false })});
+    }
+    const full = `${login}/${slug}`;
+    status.textContent = "Uploading files…";
+    const putFile = (path, b64) => ghApi(`/repos/${full}/contents/${path}`, {method:"PUT",
+      body: JSON.stringify({ message: "Add " + path, content: b64 })});
+    await putFile("index.html", textToB64(msMockup.html));
+    await putFile(".nojekyll", textToB64(""));
+    for(const a of msMockup.assets) await putFile(a.path, a.b64);
+    status.textContent = "Enabling GitHub Pages…";
+    try{ await ghApi(`/repos/${full}/pages`, {method:"POST", body: JSON.stringify({source:{branch:"main", path:"/"}})}); }
+    catch(e){ if(!/409/.test(e.message)) throw e; }
+    const url = `https://${login.toLowerCase()}.github.io/${slug}/`;
+    // wait for the build (up to ~2.5 min)
+    for(let i=0;i<30;i++){
+      status.textContent = `Waiting for Pages build… (${i*5}s)`;
+      await new Promise(r=>setTimeout(r,5000));
+      try{ const b = await ghApi(`/repos/${full}/pages/builds/latest`); if(b.status === "built") break; if(b.status === "errored") throw new Error("Pages build errored"); }catch(_){/* keep polling */}
+    }
+    // file it under Completed Sites automatically
+    customProjects.push({ id:"c_"+Date.now(), name: msMockup.name + " (mockup)",
+      desc: `Generated mockup — ${msMockup.type}`, url, paid:0, owed:0, custom:true });
+    saveCustom();
+    status.innerHTML = `Live: <a href="${url}" target="_blank">${url}</a> — added to Completed Sites`;
+    showMsg(msg, `Published! ${url} — use this as the [DEMO LINK] in your outreach. (A brand-new URL can take a minute or two to start serving — refresh if it 404s at first.)`, "info");
+  }catch(e){
+    showMsg(msg, "Publish failed: " + e.message + (/(403|404)/.test(e.message) ? " — check the token has Administration, Contents and Pages read/write on all repositories." : ""), "err");
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-rocket"/></svg>Publish to GitHub Pages';
+  }
+});
 
 /* ================= COMPLETED SITES ================= */
 const PROJECTS = [
