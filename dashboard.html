@@ -249,7 +249,7 @@
     then this tab creates the repo, pushes it, enables Pages, and files it under Completed Sites automatically.</p>
 
     <details id="msSettings" style="margin-bottom:20px;background:var(--paper);border:1px solid var(--line-soft);border-radius:12px;padding:16px 20px">
-      <summary style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);cursor:pointer">Keys & model (one-time setup)</summary>
+      <summary style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);cursor:pointer">Keys & model (only for the in-browser API route — the main button needs none)</summary>
       <div class="controls" style="margin:14px 0 0">
         <div class="field"><label for="msAnthropicKey">Anthropic API key</label><input type="password" id="msAnthropicKey" placeholder="sk-ant-…" style="width:250px"></div>
         <div class="field"><label for="msGithubToken">GitHub token (repo scope)</label><input type="password" id="msGithubToken" placeholder="github_pat_… or ghp_…" style="width:250px"></div>
@@ -287,9 +287,9 @@
       <button class="btn" id="msGenerateFree"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate &amp; publish (free — Max plan)</button>
       <button class="btn secondary" id="msGenerate" title="Runs in this browser against the Anthropic API — billed per use">Generate in-browser (API key)</button>
     </div>
-    <p class="note" style="margin-top:-6px">The main button runs on <b>your Claude Max plan at no extra cost</b>: it files the brief to your engine repo,
-    a GitHub Action running Claude Code designs, builds and publishes the site, and the live link appears right here (usually 5–15 minutes).
-    It only needs the GitHub token in the panel above. The in-browser button is the pay-per-use Anthropic API route.</p>
+    <p class="note" style="margin-top:-6px">The main button needs <b>no keys and no setup</b> — anyone on the team can use it.
+    It files the brief through a secure relay, Claude Code (running on the Max plan, no extra cost) designs, builds and publishes the site,
+    and the live link appears right here (usually 5–15 minutes). The in-browser button is the pay-per-use Anthropic API route and needs the keys above.</p>
 
     <div class="msg" id="msMsg"></div>
     <div id="msProgress" style="display:none;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px"></div>
@@ -669,7 +669,6 @@ let msCfg = JSON.parse(localStorage.getItem(MS_KEY) || "{}");
   if(msCfg.anthropicKey) document.getElementById("msAnthropicKey").value = msCfg.anthropicKey;
   if(msCfg.githubToken) document.getElementById("msGithubToken").value = msCfg.githubToken;
   if(msCfg.model) document.getElementById("msModel").value = msCfg.model;
-  if(!msCfg.anthropicKey) document.getElementById("msSettings").open = true;
 })();
 document.getElementById("msSaveKeys").addEventListener("click", ()=>{
   msCfg = {
@@ -825,13 +824,13 @@ async function msGenerate(){
   }
 }
 
-/* ---- free route: file the brief as a GitHub issue; a Claude Code Action (Max plan) builds + publishes ---- */
-const ENGINE_REPO = "Kirans0615/dmv-client-engine";
+/* ---- free route: the proxy files the brief as a GitHub issue (token lives server-side);
+       a Claude Code Action (Max plan) builds + publishes. Zero keys needed in the browser. ---- */
+const MS_PROXY = "https://dmv-mockup-proxy.vercel.app/api/mockup";
 document.getElementById("msGenerateFree").addEventListener("click", async ()=>{
   const msg = document.getElementById("msMsg"), prog = document.getElementById("msProgress"),
         btn = document.getElementById("msGenerateFree");
   hideMsg(msg);
-  if(!msCfg.githubToken){ document.getElementById("msSettings").open = true; showMsg(msg, "Add your GitHub token first (Keys & model) — it's the only key the free route needs.", "err"); return; }
   const v = id => document.getElementById(id).value.trim();
   const name = v("msName"), type = v("msType");
   if(!name || !type){ showMsg(msg, "Business name and type are required.", "err"); return; }
@@ -839,47 +838,32 @@ document.getElementById("msGenerateFree").addEventListener("click", async ()=>{
   document.getElementById("msResult").style.display = "none";
   prog.style.display = "block";
   try{
-    // upload any images into the engine repo so the Action can use them
-    const reqId = "req-" + Date.now();
-    const assetPaths = [];
+    prog.textContent = "Preparing images…";
+    const assets = [];
     const logoFile = document.getElementById("msLogo").files[0];
     const photos = [...document.getElementById("msPhotos").files].slice(0,3);
-    const uploads = [];
-    if(logoFile) uploads.push(await msFileToAsset(logoFile, `mockup-requests/${reqId}/logo.png`, 800));
-    for(let i=0;i<photos.length;i++) uploads.push(await msFileToAsset(photos[i], `mockup-requests/${reqId}/photo${i+1}.jpg`, 1400));
-    for(const u of uploads){
-      prog.textContent = `Uploading ${u.path}…`;
-      await ghApi(`/repos/${ENGINE_REPO}/contents/${u.path}`, {method:"PUT",
-        body: JSON.stringify({message:"Mockup request asset", content:u.b64})});
-      assetPaths.push(u.path);
-    }
-    prog.textContent = "Filing the request…";
-    const body = [
-      `Business: ${name} — ${type}${v("msLoc")?`, in ${v("msLoc")}`:""}`,
-      v("msContact") ? `Contact to show on the site: ${v("msContact")}` : "No contact info provided — use tasteful placeholders.",
-      v("msDesc") ? `About them: ${v("msDesc")}` : "",
-      v("msFeatures") ? `Requested features: ${v("msFeatures")}` : "No specific features requested — choose the right ones for this business.",
-      v("msStyle") ? `Style hints: ${v("msStyle")}` : "",
-      assetPaths.length ? `Assets folder: mockup-requests/${reqId}/ (${assetPaths.length} file(s); logo.png is the logo if present)` : "No images provided.",
-    ].filter(Boolean).join("\n");
-    const issue = await ghApi(`/repos/${ENGINE_REPO}/issues`, {method:"POST",
-      body: JSON.stringify({title:`Mockup: ${name}`, body, labels:["mockup"]})});
-    if(!issue.number) throw new Error("couldn't create the request issue — check the token has Issues: Read and write on dmv-client-engine");
+    if(logoFile){ const a = await msFileToAsset(logoFile, "logo.png", 800); assets.push({name:"logo.png", b64:a.b64}); }
+    for(let i=0;i<photos.length;i++){ const a = await msFileToAsset(photos[i], `photo${i+1}.jpg`, 1400); assets.push({name:`photo${i+1}.jpg`, b64:a.b64}); }
 
-    // poll the issue comments for Claude's completion message
+    prog.textContent = "Filing the request…";
+    const r = await fetch(MS_PROXY, {method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({name, type, loc:v("msLoc"), contact:v("msContact"), desc:v("msDesc"),
+        features:v("msFeatures"), style:v("msStyle"), assets})});
+    const sub = await r.json().catch(()=>({}));
+    if(!r.ok || !sub.issue) throw new Error(sub.error || ("submit failed (HTTP " + r.status + ")"));
+    const issueNum = sub.issue;
+
+    // poll the proxy for Claude's completion message
     const started = Date.now();
     while(Date.now() - started < 40*60*1000){
       const mins = Math.round((Date.now()-started)/60000);
-      prog.textContent = `Claude is designing & publishing (request #${issue.number})… ${mins} min elapsed — you can leave this tab open or check the issue on GitHub.`;
-      await new Promise(r=>setTimeout(r, 20000));
-      const comments = await ghApi(`/repos/${ENGINE_REPO}/issues/${issue.number}/comments`).catch(()=>[]);
-      const done = comments.find(c=>c.body && c.body.includes("✅ Mockup live:"));
-      const failed = comments.find(c=>c.body && c.body.includes("❌ Mockup failed"));
-      if(failed) throw new Error(failed.body.slice(0, 200));
-      if(done){
-        const m = done.body.match(/https:\/\/[^\s)]+/);
-        const url = m ? m[0] : null;
-        if(!url) throw new Error("finished but no URL found in: " + done.body.slice(0,120));
+      prog.textContent = `Claude is designing & publishing (request #${issueNum})… ${mins} min elapsed — you can leave this tab open.`;
+      await new Promise(r2=>setTimeout(r2, 30000));
+      const poll = await fetch(MS_PROXY + "?issue=" + issueNum).then(x=>x.json()).catch(()=>({status:"working"}));
+      if(poll.status === "failed") throw new Error(poll.message || "generation failed — see the issue on GitHub");
+      if(poll.status === "done"){
+        const url = poll.url;
+        if(!url) throw new Error("finished but no URL found: " + (poll.message||"").slice(0,120));
         customProjects.push({ id:"c_"+Date.now(), name: name + " (mockup)", desc: `Generated mockup — ${type}`, url, paid:0, owed:0, custom:true });
         saveCustom();
         prog.style.display = "none";
