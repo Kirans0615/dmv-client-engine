@@ -167,8 +167,12 @@
     <p class="note">Every lead you touch is saved here (in your browser). Follow-ups turn <b style="color:var(--warn)">orange</b> after 5 days of silence.</p>
     <div class="controls">
       <button class="btn secondary" id="exportCsv">⬇ Export CSV</button>
+      <button class="btn secondary" id="backupJson">💾 Backup pipeline</button>
+      <button class="btn secondary" id="restoreJson">📥 Restore backup</button>
+      <input type="file" id="restoreFile" accept=".json" style="display:none">
       <button class="btn secondary" id="clearDead">Clear dead leads</button>
     </div>
+    <p class="note" style="margin-top:-6px">Your pipeline lives in this browser. Moving to another computer? <b>Backup</b> here, <b>Restore</b> there — everything carries over.</p>
     <div class="kanban" id="kanban"></div>
   </section>
 
@@ -519,6 +523,25 @@ document.getElementById("exportCsv").addEventListener("click", ()=>{
   a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
   a.download = "dmv-leads-" + new Date().toISOString().slice(0,10) + ".csv";
   a.click();
+});
+document.getElementById("backupJson").addEventListener("click", ()=>{
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(leads,null,1)],{type:"application/json"}));
+  a.download = "dmv-pipeline-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+});
+document.getElementById("restoreJson").addEventListener("click", ()=>document.getElementById("restoreFile").click());
+document.getElementById("restoreFile").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  f.text().then(txt=>{
+    const data = JSON.parse(txt);
+    if(typeof data !== "object" || Array.isArray(data)) throw new Error("bad format");
+    let added = 0;
+    Object.entries(data).forEach(([id,l])=>{ if(l && l.status){ leads[id] = Object.assign({}, leads[id], l); added++; } });
+    saveLeads(); renderPipeline();
+    alert("Restored " + added + " leads (merged with what was already here).");
+  }).catch(()=>alert("That file doesn't look like a pipeline backup."));
+  e.target.value = "";
 });
 document.getElementById("clearDead").addEventListener("click", ()=>{
   Object.keys(leads).forEach(id=>{ if(leads[id].status==="Dead") delete leads[id]; });
