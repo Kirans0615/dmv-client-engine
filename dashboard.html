@@ -263,8 +263,7 @@
         <button class="btn secondary" id="msSaveKeys">Save keys</button>
       </div>
       <p style="font-size:12.5px;color:var(--muted);margin-top:10px">Keys are stored only in this browser (localStorage) and sent only to api.anthropic.com / api.github.com.
-      Get an API key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>; create a
-      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">fine-grained GitHub token</a> with Repository access → All repositories, and permissions → Administration + Contents + Pages (Read and write).</p>
+      <b>For the free Max-plan route</b> you only need the GitHub token: a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">fine-grained token</a> with Repository access → <b>Only select repositories → dmv-client-engine</b>, permissions → <b>Issues: Read and write</b> + <b>Contents: Read and write</b>. The Anthropic API key is only for the pay-per-use in-browser route (<a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>; that route's GitHub token also needs Administration + Pages on all repos).</p>
     </details>
 
     <div class="controls">
@@ -285,12 +284,12 @@
       <div class="field"><label for="msLogo">Logo (optional — Claude matches its colors)</label><input type="file" id="msLogo" accept="image/*"></div>
       <div class="field"><label for="msPhotos">Photos (optional, up to 3 — used in the design)</label><input type="file" id="msPhotos" accept="image/*" multiple></div>
       <div class="field"><label for="msStyle">Style hints (optional)</label><input type="text" id="msStyle" placeholder="warm, modern, bold…" style="width:170px"></div>
-      <button class="btn" id="msGenerate"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate mockup</button>
-      <button class="btn secondary" id="msCopyCC" title="No API key needed — runs on your Claude Code Max plan">Copy as Claude Code command</button>
+      <button class="btn" id="msGenerateFree"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate &amp; publish (free — Max plan)</button>
+      <button class="btn secondary" id="msGenerate" title="Runs in this browser against the Anthropic API — billed per use">Generate in-browser (API key)</button>
     </div>
-    <p class="note" style="margin-top:-6px"><b>No API key?</b> "Copy as Claude Code command" packages this brief as a <span style="font-family:var(--mono)">/mockup</span> command —
-    paste it into Claude Code (included in your Max plan, no extra cost) and it designs, builds, and publishes the mockup for you.
-    Put any logo/photos in a folder and mention the folder path in the brief. The in-browser Generate button needs an Anthropic API key (billed per use).</p>
+    <p class="note" style="margin-top:-6px">The main button runs on <b>your Claude Max plan at no extra cost</b>: it files the brief to your engine repo,
+    a GitHub Action running Claude Code designs, builds and publishes the site, and the live link appears right here (usually 5–15 minutes).
+    It only needs the GitHub token in the panel above. The in-browser button is the pay-per-use Anthropic API route.</p>
 
     <div class="msg" id="msMsg"></div>
     <div id="msProgress" style="display:none;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px"></div>
@@ -809,6 +808,9 @@ async function msGenerate(){
     // preview: swap asset paths for data URIs
     let previewHtml = html;
     for(const a of assets) previewHtml = previewHtml.split(a.path).join(`data:${a.mediaType};base64,${a.b64}`);
+    ["msPublish","msRegenerate","msDownload"].forEach(id=>document.getElementById(id).style.display="");
+    document.getElementById("msDoneBadge").textContent = "Mockup ready";
+    document.getElementById("msPreview").removeAttribute("src");
     document.getElementById("msPreview").srcdoc = previewHtml;
     document.getElementById("msResult").style.display = "block";
     document.getElementById("msPublishStatus").textContent = "";
@@ -823,15 +825,82 @@ async function msGenerate(){
   }
 }
 
-document.getElementById("msCopyCC").addEventListener("click", ()=>{
-  const msg = document.getElementById("msMsg");
+/* ---- free route: file the brief as a GitHub issue; a Claude Code Action (Max plan) builds + publishes ---- */
+const ENGINE_REPO = "Kirans0615/dmv-client-engine";
+document.getElementById("msGenerateFree").addEventListener("click", async ()=>{
+  const msg = document.getElementById("msMsg"), prog = document.getElementById("msProgress"),
+        btn = document.getElementById("msGenerateFree");
+  hideMsg(msg);
+  if(!msCfg.githubToken){ document.getElementById("msSettings").open = true; showMsg(msg, "Add your GitHub token first (Keys & model) — it's the only key the free route needs.", "err"); return; }
   const v = id => document.getElementById(id).value.trim();
-  if(!v("msName")){ showMsg(msg, "Fill in at least the business name first.", "err"); return; }
-  const cmd = "/mockup " + [v("msName"), v("msType"), v("msLoc"), v("msContact"), v("msDesc"), v("msFeatures"), v("msStyle")]
-    .map(s=>s||"—").join(" | ");
-  navigator.clipboard.writeText(cmd).then(()=>{
-    showMsg(msg, "Copied! Paste it into Claude Code. If you have a logo/photos, add the folder path at the end of the command.", "info");
-  });
+  const name = v("msName"), type = v("msType");
+  if(!name || !type){ showMsg(msg, "Business name and type are required.", "err"); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Submitting…';
+  document.getElementById("msResult").style.display = "none";
+  prog.style.display = "block";
+  try{
+    // upload any images into the engine repo so the Action can use them
+    const reqId = "req-" + Date.now();
+    const assetPaths = [];
+    const logoFile = document.getElementById("msLogo").files[0];
+    const photos = [...document.getElementById("msPhotos").files].slice(0,3);
+    const uploads = [];
+    if(logoFile) uploads.push(await msFileToAsset(logoFile, `mockup-requests/${reqId}/logo.png`, 800));
+    for(let i=0;i<photos.length;i++) uploads.push(await msFileToAsset(photos[i], `mockup-requests/${reqId}/photo${i+1}.jpg`, 1400));
+    for(const u of uploads){
+      prog.textContent = `Uploading ${u.path}…`;
+      await ghApi(`/repos/${ENGINE_REPO}/contents/${u.path}`, {method:"PUT",
+        body: JSON.stringify({message:"Mockup request asset", content:u.b64})});
+      assetPaths.push(u.path);
+    }
+    prog.textContent = "Filing the request…";
+    const body = [
+      `Business: ${name} — ${type}${v("msLoc")?`, in ${v("msLoc")}`:""}`,
+      v("msContact") ? `Contact to show on the site: ${v("msContact")}` : "No contact info provided — use tasteful placeholders.",
+      v("msDesc") ? `About them: ${v("msDesc")}` : "",
+      v("msFeatures") ? `Requested features: ${v("msFeatures")}` : "No specific features requested — choose the right ones for this business.",
+      v("msStyle") ? `Style hints: ${v("msStyle")}` : "",
+      assetPaths.length ? `Assets folder: mockup-requests/${reqId}/ (${assetPaths.length} file(s); logo.png is the logo if present)` : "No images provided.",
+    ].filter(Boolean).join("\n");
+    const issue = await ghApi(`/repos/${ENGINE_REPO}/issues`, {method:"POST",
+      body: JSON.stringify({title:`Mockup: ${name}`, body, labels:["mockup"]})});
+    if(!issue.number) throw new Error("couldn't create the request issue — check the token has Issues: Read and write on dmv-client-engine");
+
+    // poll the issue comments for Claude's completion message
+    const started = Date.now();
+    while(Date.now() - started < 40*60*1000){
+      const mins = Math.round((Date.now()-started)/60000);
+      prog.textContent = `Claude is designing & publishing (request #${issue.number})… ${mins} min elapsed — you can leave this tab open or check the issue on GitHub.`;
+      await new Promise(r=>setTimeout(r, 20000));
+      const comments = await ghApi(`/repos/${ENGINE_REPO}/issues/${issue.number}/comments`).catch(()=>[]);
+      const done = comments.find(c=>c.body && c.body.includes("✅ Mockup live:"));
+      const failed = comments.find(c=>c.body && c.body.includes("❌ Mockup failed"));
+      if(failed) throw new Error(failed.body.slice(0, 200));
+      if(done){
+        const m = done.body.match(/https:\/\/[^\s)]+/);
+        const url = m ? m[0] : null;
+        if(!url) throw new Error("finished but no URL found in: " + done.body.slice(0,120));
+        customProjects.push({ id:"c_"+Date.now(), name: name + " (mockup)", desc: `Generated mockup — ${type}`, url, paid:0, owed:0, custom:true });
+        saveCustom();
+        prog.style.display = "none";
+        // show the published result (publish/download controls are for the API flow)
+        ["msPublish","msRegenerate","msDownload"].forEach(id=>document.getElementById(id).style.display="none");
+        document.getElementById("msDoneBadge").textContent = "Published";
+        document.getElementById("msPublishStatus").innerHTML = `Live: <a href="${url}" target="_blank">${url}</a> — added to Completed Sites`;
+        document.getElementById("msPreview").src = url;
+        document.getElementById("msResult").style.display = "block";
+        showMsg(msg, `Published! ${url} — use it as the [DEMO LINK] in your outreach. (If the preview 404s, give it a minute to propagate.)`, "info");
+        return;
+      }
+    }
+    throw new Error("timed out after 40 minutes — check the issue on GitHub for what happened");
+  }catch(e){
+    prog.style.display = "none";
+    showMsg(msg, "Free-route generation failed: " + e.message, "err");
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate & publish (free — Max plan)';
+  }
 });
 
 document.getElementById("msDownload").addEventListener("click", ()=>{

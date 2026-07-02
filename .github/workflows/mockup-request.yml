@@ -1,0 +1,47 @@
+name: Mockup request
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  build-mockup:
+    # only run for mockup-labeled issues opened by the repo owner (the dashboard files them with his token)
+    if: contains(github.event.issue.labels.*.name, 'mockup') && github.event.issue.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Acknowledge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment ${{ github.event.issue.number }} -R ${{ github.repository }} -b "🎨 Claude is designing the mockup now — the live link will appear here in a few minutes."
+      - name: Generate and publish mockup with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--dangerously-skip-permissions"
+          prompt: |
+            You are an elite web designer-developer producing a client-ready website mockup that must feel custom-made, expensive, and specific to the business — never like a template. Work autonomously to completion.
+
+            THE BRIEF is the body of GitHub issue #${{ github.event.issue.number }} in ${{ github.repository }} (also readable at .github/ISSUE — just use this text):
+            ---
+            ${{ github.event.issue.body }}
+            ---
+            If the brief names an assets folder (mockup-requests/…), those files are in the checked-out repo: a file named logo.* is the logo (extract its palette and build the color system around it); others are photos — use them all meaningfully.
+
+            BUILD a single-file website in a NEW directory /tmp/site: index.html (all CSS/JS inline) plus an assets/ folder with copies of any provided images, referenced by relative path. Also add an empty .nojekyll file.
+            Design bar: NEVER use generic AI aesthetics (no Inter/Roboto/Arial/system fonts, no purple gradients, no cookie-cutter layouts). Distinctive Google Fonts pairing, cohesive palette from the industry/logo, CSS custom properties with a 4/8px rhythm, body ≥16px, contrast ≥4.5:1, focus-visible states, semantic HTML, alt text. IntersectionObserver reveal-on-scroll (150–400ms, staggered) with prefers-reduced-motion respected; sticky nav; working accessible mobile hamburger; fluid clamp() type; no horizontal scroll. Benefit-led hero (never "Welcome to X"), 4–7 sections chosen for THIS business type, 2–3 plausible first-name testimonials, story section from the brief, footer with the provided contact info and a final CTA. Add requested features AND the ones you judge right for the business. Forms are visually complete but use mailto:/tel:. Real specific copy, zero lorem ipsum. Include <title>, meta description, and the footer line: "Website mockup by Kiran Sen · kirans0615@gmail.com".
+
+            PUBLISH (the MOCKUP_PAT env var is a GitHub token with repo-creation rights; gh is installed):
+            1. cd /tmp/site && git init -b main && git add -A && git commit -m "Mockup"
+            2. export GH_TOKEN="$MOCKUP_PAT"; SLUG="<business-name-slug>-mockup"; gh repo create "$SLUG" --public --source=. --push (on name collision append a random 3-digit number)
+            3. gh api -X POST repos/${{ github.repository_owner }}/$SLUG/pages -f "source[branch]=main" -f "source[path]=/" (ignore a 409)
+            4. Poll gh api repos/${{ github.repository_owner }}/$SLUG/pages/builds/latest --jq .status until "built", then curl the live URL until HTTP 200 (keep trying for up to 3 minutes — first deploys propagate slowly).
+            5. Comment on issue #${{ github.event.issue.number }} in ${{ github.repository }} with exactly this format on the first line: "✅ Mockup live: https://<owner>.github.io/<slug>/" followed by one sentence describing the design direction. Then close the issue.
+            If anything fails unrecoverably, comment "❌ Mockup failed: <reason>" on the issue so the dashboard stops waiting.
+        env:
+          MOCKUP_PAT: ${{ secrets.MOCKUP_PAT }}
