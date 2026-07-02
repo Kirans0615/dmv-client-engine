@@ -192,10 +192,10 @@
 
   <!-- ============ TAB 2: NO-WEBSITE BUSINESSES ============ -->
   <section class="pane" id="pane-nosite">
-    <p class="note">From OpenStreetMap: established DMV businesses with a name and location but <b>no website on record</b> —
-    pre-filtered to remove chains and businesses whose obvious domain already serves a real site.
-    Still click <b>Check</b> to confirm before outreach (those with a phone and no site anywhere on Google are the strongest leads).
-    Areas are approximate map boxes and can include businesses just across a border (e.g. Georgetown shows up in the Arlington pull).</p>
+    <p class="note">Compiled from <b>Overture Maps business data</b> (aggregated from Meta/Facebook and Microsoft listings):
+    every lead here has <b>no website listed anywhere in that data</b>, has a direct contact channel (phone or email),
+    is not a chain, and its obvious domain was probed to confirm nothing is there. Still click <b>Check</b> for a final
+    eyeball before outreach. Areas are approximate map boxes and can include businesses just across a border.</p>
     <div class="controls">
       <div class="field"><label>Area</label>
         <select id="osmArea">
@@ -216,6 +216,7 @@
           <option value="cleaning">Laundry / dry cleaning</option>
           <option value="fitness">Gyms & fitness</option>
           <option value="retail">Retail shops</option>
+          <option value="trades">Contractors & trades</option>
         </select>
       </div>
       <button class="btn" id="osmLoad">Pull live leads</button>
@@ -397,7 +398,7 @@ async function loadDC(){
     // de-dup by customer number
     const seen = new Set();
     rows = rows.filter(a=>{ const k=a.CUSTOMERNUMBER; if(seen.has(k)) return false; seen.add(k); return true; });
-    if(!rows.length){ out.innerHTML = '<div class="empty">No matches — widen the date range or clear the filter.</div>'; return; }
+    if(!rows.length){ hideMsg(msg); out.innerHTML = '<div class="empty">No matches — widen the date range or clear the filter.</div>'; return; }
     showMsg(msg, `${rows.length} newly licensed businesses. Sorted newest first — the fresher the license, the less competition for their attention.`, "info");
     out.innerHTML = `<table><tr><th>Business</th><th>Activity</th><th>Address</th><th>Licensed</th><th>Status</th><th>Actions</th></tr>` +
       rows.map(a=>{
@@ -442,6 +443,7 @@ const CATS = {
   cleaning:{label:"Laundry / cleaning",sels:['node["shop"~"^(laundry|dry_cleaning)$"]','way["shop"~"^(laundry|dry_cleaning)$"]']},
   fitness: {label:"Gym / fitness",     sels:['node["leisure"="fitness_centre"]','way["leisure"="fitness_centre"]']},
   retail:  {label:"Retail shop",       sels:['node["shop"~"^(clothes|convenience|gift|florist|furniture|jewelry|shoes|books)$"]','way["shop"~"^(clothes|convenience|gift|florist|furniture|jewelry|shoes|books)$"]']},
+  trades:  {label:"Contractor / trades", sels:['node["craft"~"^(plumber|electrician|hvac|painter|carpenter|roofer|gardener|handyman)$"]','way["craft"~"^(plumber|electrician|hvac|painter|carpenter|roofer|gardener|handyman)$"]']},
 };
 
 document.getElementById("osmLoad").addEventListener("click", loadOSM);
@@ -456,26 +458,32 @@ async function loadOSM(){
     // Fallback: live Overpass query (used when running from file:// or if a snapshot is missing).
     let leads = null, freshness = "";
     try{
-      const r = await fetch(`data/osm-${areaKey}-${catKey}.json`, {cache:"no-cache"});
+      const r = await fetch(`data/leads-${areaKey}-${catKey}.json`, {cache:"no-cache"});
       if(r.ok){
         const snap = await r.json();
         leads = snap.leads;
-        freshness = ` Snapshot updated ${new Date(snap.updated).toLocaleDateString("en-US",{month:"short",day:"numeric"})} (auto-refreshes weekly).`;
+        freshness = ` Verified against Meta/Microsoft business data, updated ${new Date(snap.updated).toLocaleDateString("en-US",{month:"short",day:"numeric"})} (auto-refreshes weekly).`;
       }
     }catch(_){ /* no snapshot available (e.g. opened as a local file) — go live */ }
-    if(!leads) leads = await liveOverpass(areaKey, catKey);
-    if(!leads.length){ out.innerHTML = '<div class="empty">Nothing found for that combo — try another category or area.</div>'; return; }
-    showMsg(msg, `${leads.length} verified leads with no website on record in ${AREA_LABEL[areaKey]} (chains and obvious-domain matches already removed). Ones with a phone number are the strongest.${freshness}`, "info");
-    out.innerHTML = `<table><tr><th>Business</th><th>Type</th><th>Location</th><th>Phone</th><th>Status</th><th>Actions</th></tr>` +
+    let fallback = false;
+    if(!leads){ leads = await liveOverpass(areaKey, catKey); fallback = true; }
+    if(!leads.length){ hideMsg(msg); out.innerHTML = '<div class="empty">Nothing found for that combo — try another category or area.</div>'; return; }
+    showMsg(msg, `${leads.length} ${fallback ? "unverified leads (live OpenStreetMap fallback — open the online dashboard for the verified list)" : "verified no-website leads"} in ${AREA_LABEL[areaKey]}. Every verified lead has a phone or email and no site in aggregated business data.${fallback ? "" : freshness}`, "info");
+    out.innerHTML = `<table><tr><th>Business</th><th>Type</th><th>Location</th><th>Contact</th><th>Status</th><th>Actions</th></tr>` +
       leads.map(l=>{
         const id = "osm_" + l.id;
-        const meta = {name:l.name, category:CATS[catKey].label, address:l.addr||AREA_LABEL[areaKey], phone:l.phone, owner:"", source:"No website (OSM), "+AREA_LABEL[areaKey], kind:"nosite"};
+        const meta = {name:l.name, category:CATS[catKey].label, address:l.addr||AREA_LABEL[areaKey], phone:l.phone||"", email:l.email||"", owner:"", source:(l.verified?"Verified no-website lead, ":"No website (OSM), ")+AREA_LABEL[areaKey], kind:"nosite"};
         window._metaCache[id] = meta;
+        const contact = [
+          l.phone ? esc(l.phone) : "",
+          l.email ? `<a href="mailto:${esc(l.email)}">${esc(l.email)}</a>` : "",
+          l.social ? `<a target="_blank" href="${esc(l.social)}">Social page</a>` : "",
+        ].filter(Boolean).join("<br>");
         return `<tr>
           <td><div class="biz">${esc(l.name)}</div></td>
           <td>${esc(l.cuisine ? l.cuisine.replace(/_/g," ") : CATS[catKey].label)}</td>
           <td class="sub">${esc(l.addr) || (l.lat?`<a target="_blank" href="https://www.openstreetmap.org/?mlat=${l.lat}&mlon=${l.lon}#map=19/${l.lat}/${l.lon}">map pin</a>`:"")}</td>
-          <td>${esc(l.phone)}</td>
+          <td class="sub">${contact}</td>
           <td>${statusCell(id, meta)}</td>
           <td><div class="rowactions">
             <a class="btn secondary small" target="_blank" href="${googleLink(l.name, AREA_LABEL[areaKey])}">${ic("search")}Check</a>
@@ -556,7 +564,7 @@ ${sig}`;
 
   document.getElementById("mTitle").textContent = m.name;
   document.getElementById("mSub").textContent = [m.category, m.address, m.phone, m.source].filter(Boolean).join(" · ");
-  const mailto = `mailto:?subject=${encodeURIComponent(emailSubj)}&body=${encodeURIComponent(email)}`;
+  const mailto = `mailto:${encodeURIComponent(m.email||"")}?subject=${encodeURIComponent(emailSubj)}&body=${encodeURIComponent(email)}`;
   document.getElementById("mBody").innerHTML = `
     <div class="msg info show" style="margin-bottom:16px">Step 1: build the demo first (a one-page mockup — takes minutes with AI help). Replace [DEMO LINK] before sending. Demo-first outreach converts 3–5× better than pitching.</div>
     ${tmplBlock("Email — subject", emailSubj)}
