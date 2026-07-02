@@ -5,104 +5,164 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Lead Engine — DMV Client Engine</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0f17; --panel:#121826; --panel2:#1a2234; --line:#232d42;
-    --text:#e6ebf4; --muted:#8b96ab; --accent:#4f8cff; --accent2:#22c55e;
-    --warn:#f59e0b; --bad:#ef4444; --purple:#a78bfa;
-    --radius:12px;
+    --cream:#EDE8DF; --paper:#F5F0E7; --card:#FFFFFF;
+    --navy:#13294B; --ink:#1F2933; --muted:#5B6675;
+    --line:rgba(19,41,75,.12); --line-soft:rgba(19,41,75,.07);
+    --gold:#D9A43B; --gold-ink:#7A5A14; --gold-soft:rgba(217,164,59,.16);
+    --green:#1E7F4F; --green-soft:rgba(30,127,79,.13);
+    --red:#B3261E; --red-soft:rgba(179,38,30,.1);
+    --purple:#5B3FBF; --purple-soft:rgba(91,63,191,.11);
+    --radius:16px; --radius-sm:10px;
+    --shadow:0 1px 2px rgba(19,41,75,.05),0 4px 16px rgba(19,41,75,.05);
+    --display:"Clash Display",Inter,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;
+    --ease:cubic-bezier(.22,.8,.36,1);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;min-height:100vh}
-  a{color:var(--accent);text-decoration:none}
-  a:hover{text-decoration:underline}
+  body{background:var(--cream);color:var(--ink);font:15px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+  a{color:var(--navy);text-decoration:underline;text-decoration-color:rgba(19,41,75,.3);text-underline-offset:2px}
+  a:hover{text-decoration-color:var(--gold)}
+  ::selection{background:var(--gold-soft)}
+  :focus-visible{outline:2px solid var(--navy);outline-offset:2px;border-radius:4px}
+  svg.ic{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2.5px;flex:none}
 
-  header{display:flex;align-items:center;gap:16px;padding:16px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,15,23,.92);backdrop-filter:blur(8px);z-index:50}
-  header h1{font-size:17px;font-weight:700;letter-spacing:.2px}
-  header h1 span{color:var(--accent)}
-  .stats{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 14px;text-align:center;min-width:86px}
-  .stat b{display:block;font-size:18px}
-  .stat small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+  /* ---------- top bar (navy, portfolio-style) ---------- */
+  header{display:flex;align-items:center;gap:14px;padding:0 28px;height:62px;background:var(--navy);position:sticky;top:0;z-index:50;box-shadow:inset 0 -3px 0 var(--gold)}
+  .dots{display:flex;gap:6px}
+  .dots i{width:9px;height:9px;border-radius:50%;display:block}
+  .dots i:nth-child(1){background:#E5604C}.dots i:nth-child(2){background:#E9B44C}.dots i:nth-child(3){background:#5FA65C}
+  header h1{font-family:var(--display);font-weight:600;font-size:19px;color:#F5F0E7;letter-spacing:.2px}
+  header h1 span{color:var(--gold)}
+  header .live{margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,240,231,.75);text-decoration:none;border:1px solid rgba(245,240,231,.25);border-radius:999px;padding:6px 14px;transition:all .2s var(--ease)}
+  header .live:hover{color:var(--navy);background:var(--gold);border-color:var(--gold)}
 
-  nav.tabs{display:flex;gap:6px;padding:14px 24px 0}
-  .tab{padding:9px 18px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;background:var(--panel);color:var(--muted);cursor:pointer;font-weight:600;font-size:14px}
-  .tab.active{background:var(--panel2);color:var(--text);border-color:var(--accent)}
-  main{padding:0 24px 60px}
-  section.pane{display:none;background:var(--panel2);border:1px solid var(--line);border-radius:0 var(--radius) var(--radius) var(--radius);padding:20px}
-  section.pane.active{display:block}
+  /* ---------- KPI strip (cream, Clash numbers, mono labels) ---------- */
+  .kpis{padding:26px 28px 6px}
+  .stats{display:flex;flex-wrap:wrap}
+  .stat{padding:0 36px 0 0;margin-right:36px;border-right:1px solid var(--line);text-align:left;min-width:0}
+  .stat:last-child{border-right:none}
+  .stat b{display:block;font-family:var(--display);font-weight:600;font-size:34px;line-height:1.1;color:var(--navy);font-variant-numeric:tabular-nums}
+  .stat small{font-family:var(--mono);color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.14em}
 
-  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
-  .field{display:flex;flex-direction:column;gap:4px}
-  .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-  select,input[type=text],input[type=number],textarea{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
-  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent)}
-  .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
-  .btn:hover{filter:brightness(1.12)}
-  .btn.secondary{background:var(--panel);border:1px solid var(--line);color:var(--text)}
-  .btn.small{padding:5px 10px;font-size:12.5px}
-  .btn:disabled{opacity:.5;cursor:wait}
-  .checkbox{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13.5px;padding-bottom:9px;cursor:pointer}
+  /* ---------- tabs (pills) ---------- */
+  nav.tabs{display:flex;gap:8px;padding:18px 28px 16px;flex-wrap:wrap}
+  .tab{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border:1.5px solid var(--line);border-radius:999px;background:transparent;color:var(--navy);cursor:pointer;font-weight:600;font-size:13.5px;font-family:Inter,sans-serif;transition:all .18s var(--ease)}
+  .tab:hover{background:var(--card);box-shadow:var(--shadow)}
+  .tab.active{background:var(--navy);color:#F5F0E7;border-color:var(--navy)}
+  main{padding:0 28px 60px}
+  section.pane{display:none;background:var(--card);border:1px solid var(--line-soft);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow)}
+  section.pane.active{display:block;animation:rise .28s var(--ease)}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){section.pane.active{animation:none}*{transition-duration:.01ms!important}}
 
-  .note{color:var(--muted);font-size:13px;margin:4px 0 12px}
-  .msg{padding:10px 14px;border-radius:8px;font-size:13.5px;margin-bottom:12px;display:none}
+  /* ---------- controls ---------- */
+  .controls{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-family:var(--mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+  select,input[type=text],input[type=number],textarea{background:var(--card);border:1.5px solid var(--line);color:var(--ink);border-radius:var(--radius-sm);padding:9px 13px;font-size:14px;font-family:inherit;transition:border-color .15s var(--ease)}
+  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px var(--gold-soft)}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#F5F0E7;border:1.5px solid var(--navy);border-radius:999px;padding:10px 22px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:all .18s var(--ease);text-decoration:none}
+  .btn:hover{background:#1D3A66;transform:translateY(-1px);box-shadow:0 4px 14px rgba(19,41,75,.18)}
+  .btn:active{transform:none}
+  .btn.secondary{background:var(--card);border-color:var(--line);color:var(--navy)}
+  .btn.secondary:hover{background:var(--paper);border-color:var(--navy);box-shadow:none}
+  .btn.small{padding:6px 13px;font-size:12.5px}
+  .btn:disabled{opacity:.55;cursor:wait;transform:none}
+  .checkbox{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13.5px;padding-bottom:11px;cursor:pointer}
+  .checkbox input{accent-color:var(--navy)}
+
+  .note{color:var(--muted);font-size:13.5px;margin:2px 0 14px;max-width:900px}
+  .note b{color:var(--ink)}
+  .msg{padding:11px 16px;border-radius:var(--radius-sm);font-size:13.5px;margin-bottom:14px;display:none}
   .msg.show{display:block}
-  .msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#fca5a5}
-  .msg.info{background:rgba(79,140,255,.1);border:1px solid rgba(79,140,255,.35);color:#b6cdff}
+  .msg.err{background:var(--red-soft);border:1px solid rgba(179,38,30,.3);color:var(--red)}
+  .msg.info{background:var(--paper);border:1px solid var(--line);color:var(--ink)}
 
+  /* ---------- tables ---------- */
   table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{color:var(--muted);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
-  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-  tr:hover td{background:rgba(79,140,255,.05)}
-  td .biz{font-weight:700;font-size:14px}
+  th{font-family:var(--mono);color:var(--muted);text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;font-weight:600;padding:10px 12px;border-bottom:1.5px solid var(--line);white-space:nowrap}
+  td{padding:12px;border-bottom:1px solid var(--line-soft);vertical-align:top;font-variant-numeric:tabular-nums}
+  tr:hover td{background:var(--paper)}
+  td .biz{font-weight:600;font-size:14px;color:var(--navy)}
   td .sub{color:var(--muted);font-size:12.5px}
-  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;white-space:nowrap}
-  .pill.new{background:rgba(79,140,255,.16);color:#9dc0ff}
-  .pill.contacted{background:rgba(245,158,11,.16);color:#fcd34d}
-  .pill.demo{background:rgba(167,139,250,.16);color:#c4b5fd}
-  .pill.replied{background:rgba(34,197,94,.16);color:#86efac}
-  .pill.client{background:var(--accent2);color:#052e12}
-  .pill.dead{background:rgba(139,150,171,.16);color:var(--muted)}
-  .rowactions{display:flex;gap:6px;flex-wrap:wrap}
-  .empty{text-align:center;color:var(--muted);padding:40px 0}
-  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:7px}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:99px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .pill.new{background:rgba(19,41,75,.09);color:var(--navy)}
+  .pill.contacted{background:var(--gold-soft);color:var(--gold-ink)}
+  .pill.demo{background:var(--purple-soft);color:var(--purple)}
+  .pill.replied{background:var(--green-soft);color:var(--green)}
+  .pill.client{background:var(--green);color:#fff}
+  .pill.dead{background:rgba(91,102,117,.12);color:var(--muted)}
+  .rowactions{display:flex;gap:7px;flex-wrap:wrap}
+  .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:14px}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(245,240,231,.35);border-top-color:#F5F0E7;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:4px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* outreach modal */
-  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center;padding:20px}
+  /* ---------- outreach modal ---------- */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(19,41,75,.5);z-index:100;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
   .overlay.open{display:flex}
-  .modal{background:var(--panel2);border:1px solid var(--line);border-radius:14px;max-width:720px;width:100%;max-height:88vh;overflow-y:auto;padding:24px}
-  .modal h2{font-size:17px;margin-bottom:2px}
-  .modal .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
-  .tmpl{margin-bottom:18px}
-  .tmpl .tmpl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-  .tmpl h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
-  .tmpl pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;white-space:pre-wrap;font:13px/1.55 inherit;color:var(--text)}
+  .modal{background:var(--card);border-radius:20px;max-width:740px;width:100%;max-height:88vh;overflow-y:auto;padding:28px;box-shadow:0 24px 64px rgba(19,41,75,.28);animation:rise .24s var(--ease)}
+  .modal h2{font-family:var(--display);font-weight:600;font-size:22px;color:var(--navy);margin-bottom:2px}
+  .modal .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .tmpl{margin-bottom:20px}
+  .tmpl .tmpl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+  .tmpl h3{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+  .tmpl pre{background:var(--paper);border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:14px 16px;white-space:pre-wrap;font:13px/1.6 Inter,sans-serif;color:var(--ink)}
   .close{margin-left:auto}
 
-  .kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:8px}
-  .kcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:120px}
-  .kcol h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
-  .kcard{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;font-size:13px}
-  .kcard b{display:block;font-size:13.5px}
+  /* ---------- kanban ---------- */
+  .kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin-top:10px}
+  .kcol{background:var(--paper);border:1px solid var(--line-soft);border-radius:12px;padding:12px;min-height:130px}
+  .kcol h3{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:11px;display:flex;justify-content:space-between}
+  .kcard{background:var(--card);border:1px solid var(--line-soft);border-radius:10px;padding:11px 13px;margin-bottom:9px;font-size:13px;box-shadow:0 1px 2px rgba(19,41,75,.04);transition:transform .15s var(--ease),box-shadow .15s var(--ease)}
+  .kcard:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+  .kcard b{display:block;font-size:13.5px;color:var(--navy)}
   .kcard .sub{color:var(--muted);font-size:12px}
-  .kcard .due{color:var(--warn);font-size:11.5px;font-weight:700}
-  footer{color:var(--muted);font-size:12px;padding:18px 24px;border-top:1px solid var(--line);margin-top:30px}
+  .kcard .due{color:var(--gold-ink);font-size:11.5px;font-weight:700}
+  footer{color:var(--muted);font-size:12px;padding:20px 28px;border-top:1px solid var(--line);margin-top:34px}
 </style>
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-landmark"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2 2 9h20z"/></g>
+    <g id="i-globe"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g>
+    <g id="i-board"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v9M12 7v5M16 7v7"/></g>
+    <g id="i-case"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></g>
+    <g id="i-link"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></g>
+    <g id="i-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></g>
+    <g id="i-mail"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></g>
+    <g id="i-out"><path d="M7 17 17 7M7 7h10v10"/></g>
+    <g id="i-down"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></g>
+    <g id="i-up"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12"/></g>
+    <g id="i-trash"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></g>
+    <g id="i-x"><path d="M18 6 6 18M6 6l12 12"/></g>
+    <g id="i-zap"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></g>
+  </defs>
+</svg>
+
 <header>
-  <h1>DMV <span>Client Engine</span> — Lead Dashboard</h1>
-  <div class="stats" id="stats"></div>
+  <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+  <h1>DMV Client Engine<span>.</span></h1>
+  <a class="live" href="index.html" target="_blank">View marketing site</a>
 </header>
 
+<div class="kpis"><div class="stats" id="stats"></div></div>
+
 <nav class="tabs">
-  <button class="tab active" data-pane="dc">🆕 New DC Licenses</button>
-  <button class="tab" data-pane="nosite">🕳️ No-Website Businesses</button>
-  <button class="tab" data-pane="pipeline">📋 My Pipeline</button>
-  <button class="tab" data-pane="sites">💼 Completed Sites</button>
-  <button class="tab" data-pane="sources">🔗 More Sources</button>
+  <button class="tab active" data-pane="dc"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-zap"/></svg>New DC Licenses</button>
+  <button class="tab" data-pane="nosite"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg>No-Website Businesses</button>
+  <button class="tab" data-pane="pipeline"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-board"/></svg>My Pipeline</button>
+  <button class="tab" data-pane="sites"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-case"/></svg>Completed Sites</button>
+  <button class="tab" data-pane="sources"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-link"/></svg>More Sources</button>
 </nav>
 
 <main>
@@ -132,8 +192,9 @@
 
   <!-- ============ TAB 2: NO-WEBSITE BUSINESSES ============ -->
   <section class="pane" id="pane-nosite">
-    <p class="note">Live from OpenStreetMap: established DMV businesses with a name and location but <b>no website on record</b>.
-    Always click 🔎 to confirm before outreach — some have sites OSM doesn't know about (those with a phone and no site are the strongest leads).
+    <p class="note">From OpenStreetMap: established DMV businesses with a name and location but <b>no website on record</b> —
+    pre-filtered to remove chains and businesses whose obvious domain already serves a real site.
+    Still click <b>Check</b> to confirm before outreach (those with a phone and no site anywhere on Google are the strongest leads).
     Areas are approximate map boxes and can include businesses just across a border (e.g. Georgetown shows up in the Arlington pull).</p>
     <div class="controls">
       <div class="field"><label>Area</label>
@@ -167,11 +228,11 @@
   <section class="pane" id="pane-pipeline">
     <p class="note">Every lead you touch is saved here (in your browser). Follow-ups turn <b style="color:var(--warn)">orange</b> after 5 days of silence.</p>
     <div class="controls">
-      <button class="btn secondary" id="exportCsv">⬇ Export CSV</button>
-      <button class="btn secondary" id="backupJson">💾 Backup pipeline</button>
-      <button class="btn secondary" id="restoreJson">📥 Restore backup</button>
+      <button class="btn secondary" id="exportCsv"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-down"/></svg>Export CSV</button>
+      <button class="btn secondary" id="backupJson"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-down"/></svg>Backup pipeline</button>
+      <button class="btn secondary" id="restoreJson"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-up"/></svg>Restore backup</button>
       <input type="file" id="restoreFile" accept=".json" style="display:none">
-      <button class="btn secondary" id="clearDead">Clear dead leads</button>
+      <button class="btn secondary" id="clearDead"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"/></svg>Clear dead leads</button>
     </div>
     <p class="note" style="margin-top:-6px">Your pipeline lives in this browser. Moving to another computer? <b>Backup</b> here, <b>Restore</b> there — everything carries over.</p>
     <div class="kanban" id="kanban"></div>
@@ -180,9 +241,21 @@
   <!-- ============ TAB 4: COMPLETED SITES ============ -->
   <section class="pane" id="pane-sites">
     <p class="note">Every site you've built, from your <a href="https://kirans0615.github.io/Kiran-Website/" target="_blank">portfolio</a>, with payment tracking.
-    Click the 💰 amounts to edit — changes save in this browser (use Pipeline → Backup to carry them to another computer).</p>
+    Click the amounts to edit — changes save in this browser (use Pipeline → Backup to carry them to another computer).</p>
     <div class="stats" id="siteTotals" style="margin:0 0 16px"></div>
     <div id="sitesTable"></div>
+    <div style="margin-top:26px;padding:20px;background:var(--paper);border:1px solid var(--line-soft);border-radius:12px">
+      <h3 style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:14px">Add a project</h3>
+      <div class="controls" style="margin-bottom:0">
+        <div class="field"><label for="npName">Project name</label><input type="text" id="npName" placeholder="e.g. Bloom Accounting" style="width:190px"></div>
+        <div class="field"><label for="npUrl">Live URL (optional)</label><input type="text" id="npUrl" placeholder="https://…" style="width:210px"></div>
+        <div class="field"><label for="npDesc">Description (optional)</label><input type="text" id="npDesc" placeholder="What kind of site?" style="width:220px"></div>
+        <div class="field"><label for="npPaid">Paid ($)</label><input type="number" id="npPaid" min="0" step="50" placeholder="0" style="width:100px"></div>
+        <div class="field"><label for="npOwed">Owed ($)</label><input type="number" id="npOwed" min="0" step="50" placeholder="0" style="width:100px"></div>
+        <button class="btn" onclick="addProject()">Add project</button>
+      </div>
+      <div id="npErr" style="color:var(--red);font-size:13px;margin-top:8px"></div>
+    </div>
   </section>
 
   <!-- ============ TAB 5: SOURCES ============ -->
@@ -220,7 +293,7 @@
   <div class="modal">
     <div style="display:flex;align-items:flex-start">
       <div><h2 id="mTitle"></h2><div class="sub" id="mSub"></div></div>
-      <button class="btn secondary small close" onclick="closeModal()">✕ Close</button>
+      <button class="btn secondary small close" onclick="closeModal()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"/></svg>Close</button>
     </div>
     <div id="mBody"></div>
   </div>
@@ -271,6 +344,7 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
 
 /* ================= HELPERS ================= */
 const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ic = id => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const fmtDate = ms => new Date(ms).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
 function googleLink(name, locality){
   return `https://www.google.com/search?q=${encodeURIComponent('"'+name+'" '+locality)}`;
@@ -339,8 +413,8 @@ async function loadDC(){
           <td>${a.INITIALISSUEDATE?fmtDate(a.INITIALISSUEDATE):""}</td>
           <td>${statusCell(id, meta)}</td>
           <td><div class="rowactions">
-            <a class="btn secondary small" target="_blank" href="${googleLink(name,'Washington DC')}">🔎 Check</a>
-            <button class="btn small" onclick="openOutreach('${id}')">✉ Outreach</button>
+            <a class="btn secondary small" target="_blank" href="${googleLink(name,'Washington DC')}">${ic("search")}Check</a>
+            <button class="btn small" onclick="openOutreach('${id}')">${ic("mail")}Outreach</button>
           </div></td></tr>`;
       }).join("") + "</table>";
   }catch(e){
@@ -391,7 +465,7 @@ async function loadOSM(){
     }catch(_){ /* no snapshot available (e.g. opened as a local file) — go live */ }
     if(!leads) leads = await liveOverpass(areaKey, catKey);
     if(!leads.length){ out.innerHTML = '<div class="empty">Nothing found for that combo — try another category or area.</div>'; return; }
-    showMsg(msg, `${leads.length} businesses with no website on record in ${AREA_LABEL[areaKey]}. Ones with a ☎ number are the strongest leads. Always 🔎 verify before outreach.${freshness}`, "info");
+    showMsg(msg, `${leads.length} verified leads with no website on record in ${AREA_LABEL[areaKey]} (chains and obvious-domain matches already removed). Ones with a phone number are the strongest.${freshness}`, "info");
     out.innerHTML = `<table><tr><th>Business</th><th>Type</th><th>Location</th><th>Phone</th><th>Status</th><th>Actions</th></tr>` +
       leads.map(l=>{
         const id = "osm_" + l.id;
@@ -404,8 +478,8 @@ async function loadOSM(){
           <td>${esc(l.phone)}</td>
           <td>${statusCell(id, meta)}</td>
           <td><div class="rowactions">
-            <a class="btn secondary small" target="_blank" href="${googleLink(l.name, AREA_LABEL[areaKey])}">🔎 Check</a>
-            <button class="btn small" onclick="openOutreach('${id}')">✉ Outreach</button>
+            <a class="btn secondary small" target="_blank" href="${googleLink(l.name, AREA_LABEL[areaKey])}">${ic("search")}Check</a>
+            <button class="btn small" onclick="openOutreach('${id}')">${ic("mail")}Outreach</button>
           </div></td></tr>`;
       }).join("") + "</table>";
   }catch(e){
@@ -490,7 +564,7 @@ ${sig}`;
     ${tmplBlock("Text message", sms)}
     ${tmplBlock("Walk-in script", walkin)}
     <div style="display:flex;gap:8px;margin-top:6px">
-      <a class="btn" href="${mailto}">Open in Mail</a>
+      <a class="btn" href="${mailto}">${ic("mail")}Open in Mail</a>
       <button class="btn secondary" onclick="markContacted('${id}')">Mark as Contacted</button>
     </div>`;
   document.getElementById("overlay").classList.add("open");
@@ -524,15 +598,48 @@ const PROJECTS = [
   {id:"iam",       name:"I Am Movement",          desc:"Campaign site with storytelling design", url:"https://kirans0615.github.io/I-Am-Movement-Mockup/", paid:0, owed:0},
   {id:"vts",       name:"Vanishing Twin Foundation", desc:"International health-awareness nonprofit", url:"https://kirans0615.github.io/International-Vanishing-Twin-Syndrome-Foundation/", paid:0, owed:0},
   {id:"eck",       name:"Early Childhood Center Kenya", desc:"Education nonprofit", url:"https://kirans0615.github.io/EARLY-CHILDHOOD-CTR-KENYA/", paid:0, owed:0},
+  {id:"decade",    name:"Decade Hair Design",     desc:"Hair salon & styling studio", url:"https://kirans0615.github.io/Decade-Hair/", paid:0, owed:0},
+  {id:"kasablanca",name:"Kasablanca Remodeling",  desc:"Maryland remodeling & landscaping company", url:"https://kirans0615.github.io/Kasablanca-Remodeling-Mockup/", paid:0, owed:0},
+  {id:"arthur",    name:"Arthur Morgan Books",    desc:"Children's book author brand", url:"https://kirans0615.github.io/arthur-morgan-mockup/", paid:0, owed:0},
 ];
+const CUSTOM_KEY = "dce_custom_projects_v1";
+let customProjects = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "[]");
+function saveCustom(){ localStorage.setItem(CUSTOM_KEY, JSON.stringify(customProjects)); }
+function allProjects(){ return PROJECTS.concat(customProjects); }
 const PROJ_KEY = "dce_projects_v1";
 let projOverrides = JSON.parse(localStorage.getItem(PROJ_KEY) || "{}");
 function projData(p){ return Object.assign({}, p, projOverrides[p.id] || {}); }
 function setProj(id, field, val){
-  projOverrides[id] = projOverrides[id] || {};
-  projOverrides[id][field] = Math.max(0, parseFloat(val) || 0);
-  localStorage.setItem(PROJ_KEY, JSON.stringify(projOverrides));
+  const amount = Math.max(0, parseFloat(val) || 0);
+  const custom = customProjects.find(c=>c.id===id);
+  if(custom){ custom[field] = amount; saveCustom(); }
+  else{
+    projOverrides[id] = projOverrides[id] || {};
+    projOverrides[id][field] = amount;
+    localStorage.setItem(PROJ_KEY, JSON.stringify(projOverrides));
+  }
   renderSites();
+}
+function addProject(){
+  const name = document.getElementById("npName").value.trim();
+  let url = document.getElementById("npUrl").value.trim();
+  const desc = document.getElementById("npDesc").value.trim();
+  const paid = Math.max(0, parseFloat(document.getElementById("npPaid").value) || 0);
+  const owed = Math.max(0, parseFloat(document.getElementById("npOwed").value) || 0);
+  const errEl = document.getElementById("npErr");
+  if(!name){ errEl.textContent = "Give the project a name."; return; }
+  if(url && !/^https?:\/\//i.test(url)) url = "https://" + url;
+  customProjects.push({id:"c_"+Date.now(), name, desc, url, paid, owed, custom:true});
+  saveCustom();
+  ["npName","npUrl","npDesc","npPaid","npOwed"].forEach(i=>document.getElementById(i).value="");
+  errEl.textContent = "";
+  renderSites();
+}
+function removeProject(id){
+  const p = customProjects.find(c=>c.id===id);
+  if(!p || !confirm(`Remove "${p.name}" from Completed Sites?`)) return;
+  customProjects = customProjects.filter(c=>c.id!==id);
+  saveCustom(); renderSites();
 }
 const money = n => "$" + (n||0).toLocaleString("en-US");
 function payStatus(p){
@@ -541,7 +648,7 @@ function payStatus(p){
   return ["Unpaid","contacted"];
 }
 function renderSites(){
-  const rows = PROJECTS.map(projData);
+  const rows = allProjects().map(projData);
   const collected = rows.reduce((s,p)=>s+(p.paid||0),0);
   const outstanding = rows.reduce((s,p)=>s+(p.owed||0),0);
   const paidCount = rows.filter(p=>p.paid>0).length;
@@ -551,7 +658,7 @@ function renderSites(){
      <div class="stat"><b style="color:var(--warn)">${money(outstanding)}</b><small>outstanding</small></div>
      <div class="stat"><b>${paidCount}/${rows.length}</b><small>paid</small></div>`;
   document.getElementById("sitesTable").innerHTML =
-    `<table><tr><th>Site</th><th>Description</th><th>Payment</th><th>💰 Paid ($)</th><th>💰 Owed ($)</th><th></th></tr>` +
+    `<table><tr><th>Site</th><th>Description</th><th>Payment</th><th>Paid ($)</th><th>Owed ($)</th><th></th></tr>` +
     rows.map(p=>{
       const [label,cls] = payStatus(p);
       return `<tr>
@@ -562,7 +669,10 @@ function renderSites(){
              onchange="setProj('${p.id}','paid',this.value)"></td>
         <td><input type="number" min="0" step="50" value="${p.owed||0}" style="width:90px"
              onchange="setProj('${p.id}','owed',this.value)"></td>
-        <td><a class="btn secondary small" target="_blank" href="${p.url}">↗ Visit</a></td>
+        <td><div class="rowactions">
+          ${p.url ? `<a class="btn secondary small" target="_blank" href="${p.url}">${ic("out")}Visit</a>` : ""}
+          ${p.custom ? `<button class="btn secondary small" onclick="removeProject('${p.id}')" aria-label="Remove project">${ic("trash")}</button>` : ""}
+        </div></td>
       </tr>`;
     }).join("") + "</table>";
 }
@@ -582,10 +692,10 @@ function renderPipeline(){
         return `<div class="kcard"><b>${esc(l.name||id)}</b>
           <div class="sub">${esc(l.category||"")}${l.phone?" · "+esc(l.phone):""}</div>
           <div class="sub">${esc(l.source||"")}</div>
-          ${overdue?'<div class="due">⚠ 5+ days — follow up!</div>':""}
+          ${overdue?'<div class="due">5+ days quiet — follow up!</div>':""}
           <div class="rowactions" style="margin-top:6px">
-            <button class="btn secondary small" onclick="openOutreach('${id}')">✉</button>
-            <a class="btn secondary small" target="_blank" href="${googleLink(l.name||"","DMV")}">🔎</a>
+            <button class="btn secondary small" onclick="openOutreach('${id}')" aria-label="Outreach">${ic("mail")}</button>
+            <a class="btn secondary small" target="_blank" href="${googleLink(l.name||"","DMV")}" aria-label="Check on Google">${ic("search")}</a>
             <select style="font-size:11.5px;padding:3px 5px" onchange="setStatus('${id}', null, this.value)">
               ${STAGES.map(s=>`<option ${s===stage?"selected":""}>${s}</option>`).join("")}
             </select>
@@ -605,7 +715,7 @@ document.getElementById("exportCsv").addEventListener("click", ()=>{
 });
 document.getElementById("backupJson").addEventListener("click", ()=>{
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({leads, projects:projOverrides},null,1)],{type:"application/json"}));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({leads, projects:projOverrides, custom:customProjects},null,1)],{type:"application/json"}));
   a.download = "dmv-pipeline-backup-" + new Date().toISOString().slice(0,10) + ".json";
   a.click();
 });
@@ -622,6 +732,10 @@ document.getElementById("restoreFile").addEventListener("change", e=>{
     if(data.projects){
       Object.entries(data.projects).forEach(([id,p])=>{ projOverrides[id] = Object.assign({}, projOverrides[id], p); });
       localStorage.setItem(PROJ_KEY, JSON.stringify(projOverrides));
+    }
+    if(Array.isArray(data.custom)){
+      data.custom.forEach(p=>{ if(p && p.id && p.name && !customProjects.some(c=>c.id===p.id)) customProjects.push(p); });
+      saveCustom();
     }
     saveLeads(); renderPipeline();
     alert("Restored " + added + " leads" + (data.projects ? " + site payment records" : "") + " (merged with what was already here).");

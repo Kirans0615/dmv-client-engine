@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <!-- Navy background -->
+  <rect width="32" height="32" rx="6" fill="#13294B"/>
+
+  <!--
+    K  (x 3–13, y 7–25)
+    ─ vertical stem + two diagonal arms as polygons
+  -->
+  <!-- Stem -->
+  <rect x="3" y="7" width="3.5" height="18" rx="1" fill="#FAF8F4"/>
+  <!-- Upper arm: from stem-mid at (6.5,14–16.5) diagonally to top-right (13.5,7–9.5) -->
+  <polygon points="6.5,14 13.5,7 13.5,9.5 6.5,16.5" fill="#FAF8F4"/>
+  <!-- Lower arm: from stem-mid at (6.5,16.5–19) diagonally to bottom-right (13.5,22.5–25) -->
+  <polygon points="6.5,16.5 13.5,22.5 13.5,25 6.5,19" fill="#FAF8F4"/>
+
+  <!--
+    S  (x 15–24.5, y 7–25)
+    ─ five cream rectangles that compose the S silhouette:
+      top bar + left bowl connector + mid bar + right bowl connector + bottom bar
+  -->
+  <!-- Top bar -->
+  <rect x="15"   y="7"    width="9.5" height="3"   rx="1.5" fill="#FAF8F4"/>
+  <!-- Left connector (top bowl) -->
+  <rect x="15"   y="7"    width="3"   height="9.5" rx="0"   fill="#FAF8F4"/>
+  <!-- Middle bar -->
+  <rect x="15"   y="14.5" width="9.5" height="3"   rx="1.5" fill="#FAF8F4"/>
+  <!-- Right connector (bottom bowl) -->
+  <rect x="21.5" y="14.5" width="3"   height="10"  rx="0"   fill="#FAF8F4"/>
+  <!-- Bottom bar -->
+  <rect x="15"   y="22"   width="9.5" height="3"   rx="1.5" fill="#FAF8F4"/>
+
+  <!-- Gold period — matches the KS. logo in the navbar -->
+  <circle cx="28.5" cy="24" r="2.5" fill="#C8902A"/>
+
+</svg>

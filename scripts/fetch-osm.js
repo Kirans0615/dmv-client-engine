@@ -63,9 +63,49 @@ function slim(el) {
     cuisine: t.cuisine || "",
     addr: [t["addr:housenumber"], t["addr:street"], t["addr:city"]].filter(Boolean).join(" "),
     phone: t.phone || t["contact:phone"] || "",
+    social: t["contact:facebook"] || t["contact:instagram"] ? 1 : 0,
     lat: el.lat || (el.center && el.center.lat) || null,
     lon: el.lon || (el.center && el.center.lon) || null,
   };
+}
+
+// Chains (McDonald's, Z Burger, …) carry brand tags in OSM even when the
+// individual location node lacks a website tag — they all have sites.
+function isChain(el) {
+  const t = el.tags || {};
+  return !!(t.brand || t["brand:wikidata"] || t["operator:wikidata"]);
+}
+
+// Second line of defense: guess the business's obvious domain (name → happynailssalon.com)
+// and drop the lead if that domain serves a page actually mentioning the business name.
+// Parked/unrelated domains don't mention the name, so real leads survive.
+async function hasObviousWebsite(name) {
+  const slug = name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+  if (slug.length < 4 || slug.length > 40) return false;
+  for (const domain of [slug + ".com"]) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      const r = await fetch("https://" + domain, { signal: ctrl.signal, redirect: "follow",
+        headers: { "User-Agent": "Mozilla/5.0 (Macintosh) dmv-client-engine/1.0" } });
+      clearTimeout(timer);
+      if (!r.ok) continue;
+      const body = (await r.text()).slice(0, 60000).toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (body.includes(slug)) return true;
+    } catch (_) { /* no DNS / timeout / TLS error → no obvious site */ }
+  }
+  return false;
+}
+
+async function filterVerified(leads) {
+  const kept = [];
+  let dropped = 0;
+  for (let i = 0; i < leads.length; i += 8) {
+    const batch = leads.slice(i, i + 8);
+    const checks = await Promise.all(batch.map(l => hasObviousWebsite(l.name).catch(() => false)));
+    batch.forEach((l, j) => { if (checks[j]) dropped++; else kept.push(l); });
+  }
+  return { kept, dropped };
 }
 
 (async () => {
@@ -77,10 +117,13 @@ function slim(el) {
       const file = path.join(outDir, `osm-${areaKey}-${catKey}.json`);
       process.stdout.write(`${areaKey}/${catKey}… `);
       try {
-        const els = (await query(bbox, sels)).filter(e => e.tags && e.tags.name).map(slim);
-        els.sort((a, b) => (b.phone ? 1 : 0) - (a.phone ? 1 : 0));
-        fs.writeFileSync(file, JSON.stringify({ updated: new Date().toISOString(), leads: els }));
-        console.log(`${els.length} leads`);
+        const raw = await query(bbox, sels);
+        const els = raw.filter(e => e.tags && e.tags.name && !isChain(e)).map(slim);
+        const chains = raw.length - els.length;
+        const { kept, dropped } = await filterVerified(els);
+        kept.sort((a, b) => (b.phone ? 1 : 0) - (a.phone ? 1 : 0));
+        fs.writeFileSync(file, JSON.stringify({ updated: new Date().toISOString(), leads: kept }));
+        console.log(`${kept.length} leads (filtered ${chains} chains, ${dropped} with obvious websites)`);
       } catch (e) {
         failures++;
         console.log(`FAILED (${e.message})` + (fs.existsSync(file) ? " — keeping previous snapshot" : ""));
