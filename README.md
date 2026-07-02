@@ -12,7 +12,7 @@ A two-sided client acquisition system for a DMV-area web designer:
 
 - **New DC businesses** — official DLCP Basic Business License feed
   (`maps2.dcgis.dc.gov/dcgis/rest/services/FEEDS/DCRA/FeatureServer/0`, via opendata.dc.gov, CC-BY 4.0, refreshed daily). Filters to Active/Open/Pending licenses by initial issue date; rentals/housing licenses hidden by default.
-- **No-website businesses** — OpenStreetMap via the Overpass API: named businesses in DMV bounding boxes with no `website`/`contact:website` tag. OSM data is incomplete, so **always click 🔎 Check before outreach** — the ones with a phone number and no site anywhere on Google are your strongest leads.
+- **No-website businesses** — OpenStreetMap: named businesses in DMV bounding boxes with no `website`/`contact:website` tag. The dashboard loads these from **pre-fetched snapshots in `data/`** (instant, immune to Overpass rate-limiting); a GitHub Action (`.github/workflows/refresh-leads.yml`) re-fetches them every Monday morning, and you can refresh manually anytime with `node scripts/fetch-osm.js` or the workflow's "Run workflow" button. Live Overpass is only used as a fallback when no snapshot is available (e.g. opened as a local file). OSM data is incomplete, so **always click 🔎 Check before outreach** — the ones with a phone number and no site anywhere on Google are your strongest leads.
 - **Virginia & Maryland new registrations** — no free API; the *More Sources* tab links the official search portals (VA SCC CIS, MD Business Express) with a 5-minute weekly routine.
 
 Pipeline data is stored in the browser's `localStorage`. Export CSV weekly as backup — clearing browser data wipes the pipeline.

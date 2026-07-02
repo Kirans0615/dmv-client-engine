@@ -101,6 +101,7 @@
   <button class="tab active" data-pane="dc">🆕 New DC Licenses</button>
   <button class="tab" data-pane="nosite">🕳️ No-Website Businesses</button>
   <button class="tab" data-pane="pipeline">📋 My Pipeline</button>
+  <button class="tab" data-pane="sites">💼 Completed Sites</button>
   <button class="tab" data-pane="sources">🔗 More Sources</button>
 </nav>
 
@@ -176,7 +177,15 @@
     <div class="kanban" id="kanban"></div>
   </section>
 
-  <!-- ============ TAB 4: SOURCES ============ -->
+  <!-- ============ TAB 4: COMPLETED SITES ============ -->
+  <section class="pane" id="pane-sites">
+    <p class="note">Every site you've built, from your <a href="https://kirans0615.github.io/Kiran-Website/" target="_blank">portfolio</a>, with payment tracking.
+    Click the 💰 amounts to edit — changes save in this browser (use Pipeline → Backup to carry them to another computer).</p>
+    <div class="stats" id="siteTotals" style="margin:0 0 16px"></div>
+    <div id="sitesTable"></div>
+  </section>
+
+  <!-- ============ TAB 5: SOURCES ============ -->
   <section class="pane" id="pane-sources">
     <p class="note">Sources that don't have a free public API but are worth a weekly manual pull (5 min each):</p>
     <table>
@@ -257,6 +266,7 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
   t.classList.add("active");
   document.getElementById("pane-"+t.dataset.pane).classList.add("active");
   if(t.dataset.pane==="pipeline") renderPipeline();
+  if(t.dataset.pane==="sites") renderSites();
 }));
 
 /* ================= HELPERS ================= */
@@ -366,55 +376,70 @@ async function loadOSM(){
         out = document.getElementById("osmResults");
   const areaKey = document.getElementById("osmArea").value;
   const catKey = document.getElementById("osmCat").value;
-  const bbox = BBOX[areaKey], cat = CATS[catKey];
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Pulling…'; hideMsg(msg);
   try{
-    const filters = '["name"][!"website"][!"contact:website"]';
-    const body = `[out:json][timeout:25];(${cat.sels.map(s=>s+filters+`(${bbox});`).join("")});out center 200;`;
-    // public Overpass servers rate-limit or go down; try each with a hard timeout so a dead one can't hang the pull
-    const MIRRORS = ["https://overpass-api.de/api/interpreter","https://overpass.private.coffee/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
-    let d = null, lastErr = null;
-    for(const url of MIRRORS){
-      try{
-        const ctrl = new AbortController();
-        const timer = setTimeout(()=>ctrl.abort(), 35000);
-        const r = await fetch(url, {method:"POST", body:"data="+encodeURIComponent(body), headers:{"Content-Type":"application/x-www-form-urlencoded"}, signal:ctrl.signal});
-        clearTimeout(timer);
-        if(!r.ok) throw new Error("HTTP " + r.status);
-        d = await r.json(); break;
-      }catch(e){ lastErr = e; }
-    }
-    if(!d) throw lastErr || new Error("all mirrors failed");
-    let els = (d.elements||[]).filter(e=>e.tags && e.tags.name);
-    // strongest leads first: has phone (real, reachable business) beats no phone
-    els.sort((a,b)=>((b.tags.phone||b.tags["contact:phone"])?1:0)-((a.tags.phone||a.tags["contact:phone"])?1:0));
-    if(!els.length){ out.innerHTML = '<div class="empty">Nothing found for that combo — try another category or area.</div>'; return; }
-    showMsg(msg, `${els.length} businesses with no website on record in ${AREA_LABEL[areaKey]}. Ones with a ☎ number are the strongest leads. Always 🔎 verify before outreach.`, "info");
+    // 1st choice: pre-fetched snapshot served from this site (instant, can't be rate-limited).
+    // Fallback: live Overpass query (used when running from file:// or if a snapshot is missing).
+    let leads = null, freshness = "";
+    try{
+      const r = await fetch(`data/osm-${areaKey}-${catKey}.json`, {cache:"no-cache"});
+      if(r.ok){
+        const snap = await r.json();
+        leads = snap.leads;
+        freshness = ` Snapshot updated ${new Date(snap.updated).toLocaleDateString("en-US",{month:"short",day:"numeric"})} (auto-refreshes weekly).`;
+      }
+    }catch(_){ /* no snapshot available (e.g. opened as a local file) — go live */ }
+    if(!leads) leads = await liveOverpass(areaKey, catKey);
+    if(!leads.length){ out.innerHTML = '<div class="empty">Nothing found for that combo — try another category or area.</div>'; return; }
+    showMsg(msg, `${leads.length} businesses with no website on record in ${AREA_LABEL[areaKey]}. Ones with a ☎ number are the strongest leads. Always 🔎 verify before outreach.${freshness}`, "info");
     out.innerHTML = `<table><tr><th>Business</th><th>Type</th><th>Location</th><th>Phone</th><th>Status</th><th>Actions</th></tr>` +
-      els.map(e=>{
-        const t = e.tags, name = t.name;
-        const id = "osm_" + e.type + e.id;
-        const addr = [t["addr:housenumber"], t["addr:street"], t["addr:city"]].filter(Boolean).join(" ");
-        const phone = t.phone || t["contact:phone"] || "";
-        const lat = e.lat || (e.center&&e.center.lat), lon = e.lon || (e.center&&e.center.lon);
-        const meta = {name, category:CATS[catKey].label, address:addr||AREA_LABEL[areaKey], phone, owner:"", source:"No website (OSM), "+AREA_LABEL[areaKey], kind:"nosite"};
+      leads.map(l=>{
+        const id = "osm_" + l.id;
+        const meta = {name:l.name, category:CATS[catKey].label, address:l.addr||AREA_LABEL[areaKey], phone:l.phone, owner:"", source:"No website (OSM), "+AREA_LABEL[areaKey], kind:"nosite"};
         window._metaCache[id] = meta;
         return `<tr>
-          <td><div class="biz">${esc(name)}</div></td>
-          <td>${esc(t.cuisine ? t.cuisine.replace(/_/g," ") : CATS[catKey].label)}</td>
-          <td class="sub">${esc(addr) || (lat?`<a target="_blank" href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=19/${lat}/${lon}">map pin</a>`:"")}</td>
-          <td>${esc(phone)}</td>
+          <td><div class="biz">${esc(l.name)}</div></td>
+          <td>${esc(l.cuisine ? l.cuisine.replace(/_/g," ") : CATS[catKey].label)}</td>
+          <td class="sub">${esc(l.addr) || (l.lat?`<a target="_blank" href="https://www.openstreetmap.org/?mlat=${l.lat}&mlon=${l.lon}#map=19/${l.lat}/${l.lon}">map pin</a>`:"")}</td>
+          <td>${esc(l.phone)}</td>
           <td>${statusCell(id, meta)}</td>
           <td><div class="rowactions">
-            <a class="btn secondary small" target="_blank" href="${googleLink(name, AREA_LABEL[areaKey])}">🔎 Check</a>
+            <a class="btn secondary small" target="_blank" href="${googleLink(l.name, AREA_LABEL[areaKey])}">🔎 Check</a>
             <button class="btn small" onclick="openOutreach('${id}')">✉ Outreach</button>
           </div></td></tr>`;
       }).join("") + "</table>";
   }catch(e){
-    showMsg(msg, "Overpass API error: " + e.message + " — it rate-limits; wait ~30s and retry.", "err");
+    showMsg(msg, "Couldn't load leads (" + e.message + "). The live OpenStreetMap servers are busy — wait a minute and retry, or use the site's online version where leads are pre-loaded.", "err");
   }finally{
     btn.disabled = false; btn.textContent = "Pull live leads";
   }
+}
+async function liveOverpass(areaKey, catKey){
+  const bbox = BBOX[areaKey], cat = CATS[catKey];
+  const filters = '["name"][!"website"][!"contact:website"]';
+  const body = `[out:json][timeout:25];(${cat.sels.map(s=>s+filters+`(${bbox});`).join("")});out center 200;`;
+  const MIRRORS = ["https://overpass-api.de/api/interpreter","https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+  let d = null, lastErr = null;
+  for(const url of MIRRORS){
+    try{
+      const ctrl = new AbortController();
+      const timer = setTimeout(()=>ctrl.abort(), 35000);
+      const r = await fetch(url, {method:"POST", body:"data="+encodeURIComponent(body), headers:{"Content-Type":"application/x-www-form-urlencoded"}, signal:ctrl.signal});
+      clearTimeout(timer);
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      d = await r.json(); break;
+    }catch(e){ lastErr = e; }
+  }
+  if(!d) throw lastErr || new Error("all servers failed");
+  const els = (d.elements||[]).filter(e=>e.tags && e.tags.name).map(e=>{
+    const t = e.tags;
+    return {id:e.type+e.id, name:t.name, cuisine:t.cuisine||"",
+      addr:[t["addr:housenumber"],t["addr:street"],t["addr:city"]].filter(Boolean).join(" "),
+      phone:t.phone||t["contact:phone"]||"",
+      lat:e.lat||(e.center&&e.center.lat)||null, lon:e.lon||(e.center&&e.center.lon)||null};
+  });
+  els.sort((a,b)=>(b.phone?1:0)-(a.phone?1:0));
+  return els;
 }
 
 /* ================= OUTREACH GENERATOR ================= */
@@ -488,6 +513,60 @@ function markContacted(id){
 function closeModal(){ document.getElementById("overlay").classList.remove("open"); }
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
 
+/* ================= COMPLETED SITES ================= */
+const PROJECTS = [
+  {id:"jafreight", name:"J&A Freight Logistics", desc:"Freight & logistics company site", url:"https://kirans0615.github.io/J-A-Freight-Logistics-Mock/", paid:1500, owed:0},
+  {id:"fedeeo",    name:"Federal EEO LLC",        desc:"Federal EEO consulting site (Next.js)", url:"https://kirans0615.github.io/Federal-EEO-Web/", paid:600, owed:0},
+  {id:"omalley",   name:"O'Malley Fabrics",       desc:"DMV seamstress studio — live price estimator & booking", url:"https://omalleyfabrics.com", paid:0, owed:0},
+  {id:"een",       name:"Empower Estates Network",desc:"Real estate investment brand", url:"https://empowerestatesnetwork.com", paid:0, owed:0},
+  {id:"arvyx",     name:"ARVYX",                  desc:"Real estate deal-intelligence SaaS", url:"https://kirans0615.github.io/ARVYX-test/", paid:0, owed:0},
+  {id:"ctd",       name:"CTD Entertainment",      desc:"Entertainment management company", url:"https://kirans0615.github.io/CTD-Entertainment-Management/", paid:0, owed:0},
+  {id:"iam",       name:"I Am Movement",          desc:"Campaign site with storytelling design", url:"https://kirans0615.github.io/I-Am-Movement-Mockup/", paid:0, owed:0},
+  {id:"vts",       name:"Vanishing Twin Foundation", desc:"International health-awareness nonprofit", url:"https://kirans0615.github.io/International-Vanishing-Twin-Syndrome-Foundation/", paid:0, owed:0},
+  {id:"eck",       name:"Early Childhood Center Kenya", desc:"Education nonprofit", url:"https://kirans0615.github.io/EARLY-CHILDHOOD-CTR-KENYA/", paid:0, owed:0},
+];
+const PROJ_KEY = "dce_projects_v1";
+let projOverrides = JSON.parse(localStorage.getItem(PROJ_KEY) || "{}");
+function projData(p){ return Object.assign({}, p, projOverrides[p.id] || {}); }
+function setProj(id, field, val){
+  projOverrides[id] = projOverrides[id] || {};
+  projOverrides[id][field] = Math.max(0, parseFloat(val) || 0);
+  localStorage.setItem(PROJ_KEY, JSON.stringify(projOverrides));
+  renderSites();
+}
+const money = n => "$" + (n||0).toLocaleString("en-US");
+function payStatus(p){
+  if(p.paid > 0 && p.owed > 0) return ["Partial","demo"];
+  if(p.paid > 0) return ["Paid","client"];
+  return ["Unpaid","contacted"];
+}
+function renderSites(){
+  const rows = PROJECTS.map(projData);
+  const collected = rows.reduce((s,p)=>s+(p.paid||0),0);
+  const outstanding = rows.reduce((s,p)=>s+(p.owed||0),0);
+  const paidCount = rows.filter(p=>p.paid>0).length;
+  document.getElementById("siteTotals").innerHTML =
+    `<div class="stat"><b>${rows.length}</b><small>sites built</small></div>
+     <div class="stat"><b style="color:var(--accent2)">${money(collected)}</b><small>collected</small></div>
+     <div class="stat"><b style="color:var(--warn)">${money(outstanding)}</b><small>outstanding</small></div>
+     <div class="stat"><b>${paidCount}/${rows.length}</b><small>paid</small></div>`;
+  document.getElementById("sitesTable").innerHTML =
+    `<table><tr><th>Site</th><th>Description</th><th>Payment</th><th>💰 Paid ($)</th><th>💰 Owed ($)</th><th></th></tr>` +
+    rows.map(p=>{
+      const [label,cls] = payStatus(p);
+      return `<tr>
+        <td><div class="biz">${esc(p.name)}</div></td>
+        <td class="sub">${esc(p.desc)}</td>
+        <td><span class="pill ${cls}">${label}</span></td>
+        <td><input type="number" min="0" step="50" value="${p.paid||0}" style="width:90px"
+             onchange="setProj('${p.id}','paid',this.value)"></td>
+        <td><input type="number" min="0" step="50" value="${p.owed||0}" style="width:90px"
+             onchange="setProj('${p.id}','owed',this.value)"></td>
+        <td><a class="btn secondary small" target="_blank" href="${p.url}">↗ Visit</a></td>
+      </tr>`;
+    }).join("") + "</table>";
+}
+
 /* ================= PIPELINE ================= */
 function renderPipeline(){
   const k = document.getElementById("kanban");
@@ -526,7 +605,7 @@ document.getElementById("exportCsv").addEventListener("click", ()=>{
 });
 document.getElementById("backupJson").addEventListener("click", ()=>{
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(leads,null,1)],{type:"application/json"}));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({leads, projects:projOverrides},null,1)],{type:"application/json"}));
   a.download = "dmv-pipeline-backup-" + new Date().toISOString().slice(0,10) + ".json";
   a.click();
 });
@@ -536,10 +615,16 @@ document.getElementById("restoreFile").addEventListener("change", e=>{
   f.text().then(txt=>{
     const data = JSON.parse(txt);
     if(typeof data !== "object" || Array.isArray(data)) throw new Error("bad format");
+    // new backups wrap {leads, projects}; old ones are the bare leads map
+    const leadMap = data.leads || data;
     let added = 0;
-    Object.entries(data).forEach(([id,l])=>{ if(l && l.status){ leads[id] = Object.assign({}, leads[id], l); added++; } });
+    Object.entries(leadMap).forEach(([id,l])=>{ if(l && l.status){ leads[id] = Object.assign({}, leads[id], l); added++; } });
+    if(data.projects){
+      Object.entries(data.projects).forEach(([id,p])=>{ projOverrides[id] = Object.assign({}, projOverrides[id], p); });
+      localStorage.setItem(PROJ_KEY, JSON.stringify(projOverrides));
+    }
     saveLeads(); renderPipeline();
-    alert("Restored " + added + " leads (merged with what was already here).");
+    alert("Restored " + added + " leads" + (data.projects ? " + site payment records" : "") + " (merged with what was already here).");
   }).catch(()=>alert("That file doesn't look like a pipeline backup."));
   e.target.value = "";
 });

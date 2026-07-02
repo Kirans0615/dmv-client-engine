@@ -16,7 +16,8 @@
   "description": "Web design for small businesses in Washington DC, Northern Virginia, and Maryland.",
   "areaServed": ["Washington DC","Arlington VA","Alexandria VA","Fairfax County VA","Montgomery County MD","Prince George's County MD"],
   "priceRange": "$$",
-  "email": "alemarraa@gmail.com"
+  "email": "kirans0615@gmail.com",
+  "telephone": "301-633-2491"
 }
 </script>
 <style>
@@ -120,7 +121,7 @@
     <div class="logo" id="navLogo">Sen<b>Digital</b></div>
     <div class="links">
       <a href="#how">How it works</a>
-      <a href="#niches">Who it's for</a>
+      <a href="#work">Work</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
       <a href="#audit" class="btn">Free homepage draft</a>
@@ -172,6 +173,26 @@
       <div class="niche"><div class="em">🚗</div><h3>Auto repair</h3><p>Service lists, hours, and reviews front and center — the three things every customer checks first.</p></div>
       <div class="niche"><div class="em">🆕</div><h3>Brand-new businesses</h3><p>Just got your license? Launch with a real web presence from day one — site, domain, email, Google listing.</p></div>
     </div>
+  </div>
+</section>
+
+<section id="work">
+  <div class="wrap">
+    <span class="eyebrow">Recent work</span>
+    <h2 style="font-size:32px">Real sites, for real businesses.</h2>
+    <p style="margin-top:10px;max-width:640px">Click any of them — every one is live. From seamstress studios to logistics companies to international nonprofits.</p>
+    <div class="niches" style="margin-top:32px">
+      <a class="niche" target="_blank" href="https://omalleyfabrics.com" style="display:block;color:inherit"><h3>O'Malley Fabrics ↗</h3><p>DMV seamstress studio with a live price estimator and booking system.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/J-A-Freight-Logistics-Mock/" style="display:block;color:inherit"><h3>J&amp;A Freight Logistics ↗</h3><p>Freight &amp; logistics company with professional branding.</p></a>
+      <a class="niche" target="_blank" href="https://empowerestatesnetwork.com" style="display:block;color:inherit"><h3>Empower Estates Network ↗</h3><p>Real estate investment brand, conversion-focused design.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/Federal-EEO-Web/" style="display:block;color:inherit"><h3>Federal EEO LLC ↗</h3><p>Federal EEO consulting practice, built in Next.js.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/ARVYX-test/" style="display:block;color:inherit"><h3>ARVYX ↗</h3><p>Real estate deal-intelligence SaaS platform with dashboard UI.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/CTD-Entertainment-Management/" style="display:block;color:inherit"><h3>CTD Entertainment ↗</h3><p>Entertainment management company with creative direction.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/I-Am-Movement-Mockup/" style="display:block;color:inherit"><h3>I Am Movement ↗</h3><p>Campaign site built around emotional storytelling.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/International-Vanishing-Twin-Syndrome-Foundation/" style="display:block;color:inherit"><h3>Vanishing Twin Foundation ↗</h3><p>International nonprofit for health awareness.</p></a>
+      <a class="niche" target="_blank" href="https://kirans0615.github.io/EARLY-CHILDHOOD-CTR-KENYA/" style="display:block;color:inherit"><h3>Early Childhood Center Kenya ↗</h3><p>Education nonprofit serving children in Kenya.</p></a>
+    </div>
+    <p style="margin-top:24px"><a id="portfolioLink" href="#" target="_blank">See the full portfolio →</a></p>
   </div>
 </section>
 
@@ -258,7 +279,7 @@
   <div class="wrap">
     <div id="footBrand">Sen Digital · Washington, DC</div>
     <div>Serving DC · Arlington · Alexandria · Fairfax · Bethesda · Silver Spring · PG County</div>
-    <div><a id="footMail" href="#">Email</a></div>
+    <div><a id="footMail" href="#">Email</a> · <span id="footPhone"></span></div>
   </div>
 </footer>
 
@@ -275,6 +296,8 @@
   const mail = "mailto:" + CONFIG.email + "?subject=" + encodeURIComponent("Free homepage draft for my business");
   document.getElementById("mailLink").href = mail;
   document.getElementById("footMail").href = "mailto:" + CONFIG.email;
+  document.getElementById("footPhone").textContent = CONFIG.phone || "";
+  if (CONFIG.portfolioUrl) document.getElementById("portfolioLink").href = CONFIG.portfolioUrl;
 
   const form = document.getElementById("auditForm");
   const note = document.getElementById("formNote");
