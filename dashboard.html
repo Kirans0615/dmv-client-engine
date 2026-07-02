@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Lead Engine — DMV Client Engine</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#121826; --panel2:#1a2234; --line:#232d42;
+    --text:#e6ebf4; --muted:#8b96ab; --accent:#4f8cff; --accent2:#22c55e;
+    --warn:#f59e0b; --bad:#ef4444; --purple:#a78bfa;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;min-height:100vh}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{display:flex;align-items:center;gap:16px;padding:16px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,15,23,.92);backdrop-filter:blur(8px);z-index:50}
+  header h1{font-size:17px;font-weight:700;letter-spacing:.2px}
+  header h1 span{color:var(--accent)}
+  .stats{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 14px;text-align:center;min-width:86px}
+  .stat b{display:block;font-size:18px}
+  .stat small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+
+  nav.tabs{display:flex;gap:6px;padding:14px 24px 0}
+  .tab{padding:9px 18px;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;background:var(--panel);color:var(--muted);cursor:pointer;font-weight:600;font-size:14px}
+  .tab.active{background:var(--panel2);color:var(--text);border-color:var(--accent)}
+  main{padding:0 24px 60px}
+  section.pane{display:none;background:var(--panel2);border:1px solid var(--line);border-radius:0 var(--radius) var(--radius) var(--radius);padding:20px}
+  section.pane.active{display:block}
+
+  .controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  select,input[type=text],input[type=number],textarea{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px;font-family:inherit}
+  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+  .btn:hover{filter:brightness(1.12)}
+  .btn.secondary{background:var(--panel);border:1px solid var(--line);color:var(--text)}
+  .btn.small{padding:5px 10px;font-size:12.5px}
+  .btn:disabled{opacity:.5;cursor:wait}
+  .checkbox{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13.5px;padding-bottom:9px;cursor:pointer}
+
+  .note{color:var(--muted);font-size:13px;margin:4px 0 12px}
+  .msg{padding:10px 14px;border-radius:8px;font-size:13.5px;margin-bottom:12px;display:none}
+  .msg.show{display:block}
+  .msg.err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#fca5a5}
+  .msg.info{background:rgba(79,140,255,.1);border:1px solid rgba(79,140,255,.35);color:#b6cdff}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{color:var(--muted);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:hover td{background:rgba(79,140,255,.05)}
+  td .biz{font-weight:700;font-size:14px}
+  td .sub{color:var(--muted);font-size:12.5px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .pill.new{background:rgba(79,140,255,.16);color:#9dc0ff}
+  .pill.contacted{background:rgba(245,158,11,.16);color:#fcd34d}
+  .pill.demo{background:rgba(167,139,250,.16);color:#c4b5fd}
+  .pill.replied{background:rgba(34,197,94,.16);color:#86efac}
+  .pill.client{background:var(--accent2);color:#052e12}
+  .pill.dead{background:rgba(139,150,171,.16);color:var(--muted)}
+  .rowactions{display:flex;gap:6px;flex-wrap:wrap}
+  .empty{text-align:center;color:var(--muted);padding:40px 0}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:7px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* outreach modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:var(--panel2);border:1px solid var(--line);border-radius:14px;max-width:720px;width:100%;max-height:88vh;overflow-y:auto;padding:24px}
+  .modal h2{font-size:17px;margin-bottom:2px}
+  .modal .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .tmpl{margin-bottom:18px}
+  .tmpl .tmpl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .tmpl h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .tmpl pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;white-space:pre-wrap;font:13px/1.55 inherit;color:var(--text)}
+  .close{margin-left:auto}
+
+  .kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:8px}
+  .kcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:120px}
+  .kcol h3{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
+  .kcard{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:8px;font-size:13px}
+  .kcard b{display:block;font-size:13.5px}
+  .kcard .sub{color:var(--muted);font-size:12px}
+  .kcard .due{color:var(--warn);font-size:11.5px;font-weight:700}
+  footer{color:var(--muted);font-size:12px;padding:18px 24px;border-top:1px solid var(--line);margin-top:30px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>DMV <span>Client Engine</span> — Lead Dashboard</h1>
+  <div class="stats" id="stats"></div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-pane="dc">🆕 New DC Licenses</button>
+  <button class="tab" data-pane="nosite">🕳️ No-Website Businesses</button>
+  <button class="tab" data-pane="pipeline">📋 My Pipeline</button>
+  <button class="tab" data-pane="sources">🔗 More Sources</button>
+</nav>
+
+<main>
+
+  <!-- ============ TAB 1: NEW DC BUSINESS LICENSES ============ -->
+  <section class="pane active" id="pane-dc">
+    <p class="note">Live from DC's official Basic Business License feed (DLCP via opendata.dc.gov, refreshed daily).
+    These businesses got licensed <b>days ago</b> — they need a website and nobody has pitched them yet.</p>
+    <div class="controls">
+      <div class="field"><label>Licensed in the last</label>
+        <select id="dcDays">
+          <option value="7">7 days</option>
+          <option value="14" selected>14 days</option>
+          <option value="30">30 days</option>
+          <option value="60">60 days</option>
+        </select>
+      </div>
+      <div class="field"><label>Activity contains</label>
+        <input type="text" id="dcFilter" placeholder="e.g. restaurant, salon, contractor">
+      </div>
+      <label class="checkbox"><input type="checkbox" id="dcHideRentals" checked> Hide rentals / housing licenses</label>
+      <button class="btn" id="dcLoad">Pull live leads</button>
+    </div>
+    <div class="msg" id="dcMsg"></div>
+    <div id="dcResults"><div class="empty">Click “Pull live leads” to fetch newly licensed DC businesses.</div></div>
+  </section>
+
+  <!-- ============ TAB 2: NO-WEBSITE BUSINESSES ============ -->
+  <section class="pane" id="pane-nosite">
+    <p class="note">Live from OpenStreetMap: established DMV businesses with a name and location but <b>no website on record</b>.
+    Always click 🔎 to confirm before outreach — some have sites OSM doesn't know about (those with a phone and no site are the strongest leads).
+    Areas are approximate map boxes and can include businesses just across a border (e.g. Georgetown shows up in the Arlington pull).</p>
+    <div class="controls">
+      <div class="field"><label>Area</label>
+        <select id="osmArea">
+          <option value="dc">Washington, DC</option>
+          <option value="arlalex" selected>Arlington + Alexandria</option>
+          <option value="fairfax">Fairfax County (inner)</option>
+          <option value="moco">Bethesda / Silver Spring (MoCo)</option>
+          <option value="pg">Prince George's County</option>
+          <option value="loudoun">Loudoun / Ashburn</option>
+        </select>
+      </div>
+      <div class="field"><label>Category</label>
+        <select id="osmCat">
+          <option value="food">Restaurants & cafés</option>
+          <option value="beauty" selected>Salons & barbers</option>
+          <option value="auto">Auto repair</option>
+          <option value="health">Dentists / clinics</option>
+          <option value="cleaning">Laundry / dry cleaning</option>
+          <option value="fitness">Gyms & fitness</option>
+          <option value="retail">Retail shops</option>
+        </select>
+      </div>
+      <button class="btn" id="osmLoad">Pull live leads</button>
+    </div>
+    <div class="msg" id="osmMsg"></div>
+    <div id="osmResults"><div class="empty">Pick an area + category, then pull leads.</div></div>
+  </section>
+
+  <!-- ============ TAB 3: PIPELINE ============ -->
+  <section class="pane" id="pane-pipeline">
+    <p class="note">Every lead you touch is saved here (in your browser). Follow-ups turn <b style="color:var(--warn)">orange</b> after 5 days of silence.</p>
+    <div class="controls">
+      <button class="btn secondary" id="exportCsv">⬇ Export CSV</button>
+      <button class="btn secondary" id="clearDead">Clear dead leads</button>
+    </div>
+    <div class="kanban" id="kanban"></div>
+  </section>
+
+  <!-- ============ TAB 4: SOURCES ============ -->
+  <section class="pane" id="pane-sources">
+    <p class="note">Sources that don't have a free public API but are worth a weekly manual pull (5 min each):</p>
+    <table>
+      <tr><th>Source</th><th>What you get</th><th>Routine</th></tr>
+      <tr><td><a href="https://cis.scc.virginia.gov/EntitySearch/Index" target="_blank">Virginia SCC — Clerk's Information System</a></td>
+        <td>Every new VA LLC/corp: formation date, principal office address, registered agent.</td>
+        <td>Weekly: search recent filings in Arlington, Fairfax, Alexandria ZIPs; add promising ones to pipeline manually.</td></tr>
+      <tr><td><a href="https://egov.maryland.gov/businessexpress/entitysearch" target="_blank">Maryland Business Express (SDAT)</a></td>
+        <td>New MD entities with formation dates and resident agent addresses.</td>
+        <td>Weekly: check new consumer-facing names in Montgomery & PG counties.</td></tr>
+      <tr><td><a href="https://opendata.maryland.gov" target="_blank">Maryland Open Data Portal</a></td>
+        <td>County-level business license datasets appear periodically.</td>
+        <td>Monthly: search “business license”.</td></tr>
+      <tr><td><a href="https://www.google.com/maps" target="_blank">Google Maps manual sweep</a></td>
+        <td>Businesses whose profile has no website link, or links to Facebook/Instagram only.</td>
+        <td>Whenever you're in a neighborhood: search a category, scan for missing website buttons.</td></tr>
+      <tr><td><a href="https://www.restonchamber.org/nova-b2g-matchmaking-business-expo/" target="_blank">NOVA B2G Expo</a> / <a href="https://dcchamber.org/chamber-events/" target="_blank">DC Chamber events</a></td>
+        <td>GovCon subcontractors who need capability-statement websites — a DMV-only niche.</td>
+        <td>1 event per month minimum. Bring the demo-first pitch.</td></tr>
+    </table>
+  </section>
+
+</main>
+
+<footer>
+  Data: DC DLCP Basic Business Licenses (CC-BY 4.0, opendata.dc.gov) · OpenStreetMap contributors (ODbL).
+  Pipeline data lives in this browser's localStorage — export CSV regularly as backup.
+</footer>
+
+<!-- outreach modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div style="display:flex;align-items:flex-start">
+      <div><h2 id="mTitle"></h2><div class="sub" id="mSub"></div></div>
+      <button class="btn secondary small close" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+"use strict";
+/* ================= STORAGE / PIPELINE ================= */
+const STORE_KEY = "dce_leads_v1";
+const STAGES = ["New","Contacted","Demo Sent","Replied","Client","Dead"];
+const PILL = {New:"new",Contacted:"contacted","Demo Sent":"demo",Replied:"replied",Client:"client",Dead:"dead"};
+let leads = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+function saveLeads(){ localStorage.setItem(STORE_KEY, JSON.stringify(leads)); renderStats(); }
+function upsertLead(id, data){
+  leads[id] = Object.assign(leads[id] || {status:"New", notes:"", savedAt:Date.now()}, data);
+  saveLeads();
+}
+function setStatus(id, meta, status){
+  upsertLead(id, Object.assign({}, meta, {status, statusAt:Date.now()}));
+  renderPipeline();
+}
+function renderStats(){
+  const all = Object.values(leads);
+  const week = Date.now() - 7*864e5;
+  const s = {
+    tracked: all.length,
+    contacted: all.filter(l=>l.status!=="New"&&l.status!=="Dead").length,
+    demos: all.filter(l=>["Demo Sent","Replied","Client"].includes(l.status)).length,
+    clients: all.filter(l=>l.status==="Client").length,
+  };
+  document.getElementById("stats").innerHTML =
+    `<div class="stat"><b>${s.tracked}</b><small>tracked</small></div>
+     <div class="stat"><b>${s.contacted}</b><small>contacted</small></div>
+     <div class="stat"><b>${s.demos}</b><small>demos</small></div>
+     <div class="stat"><b style="color:var(--accent2)">${s.clients}</b><small>clients</small></div>`;
+}
+
+/* ================= TABS ================= */
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".pane").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");
+  document.getElementById("pane-"+t.dataset.pane).classList.add("active");
+  if(t.dataset.pane==="pipeline") renderPipeline();
+}));
+
+/* ================= HELPERS ================= */
+const esc = s => String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDate = ms => new Date(ms).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+function googleLink(name, locality){
+  return `https://www.google.com/search?q=${encodeURIComponent('"'+name+'" '+locality)}`;
+}
+function showMsg(el, text, cls){
+  el.textContent = text; el.className = "msg show " + cls;
+}
+function hideMsg(el){ el.className = "msg"; }
+function statusCell(id, meta){
+  const cur = (leads[id]||{}).status || "—";
+  const opts = ["—"].concat(STAGES).map(s=>`<option ${s===cur?"selected":""}>${s}</option>`).join("");
+  const pill = cur==="—" ? "" : `<span class="pill ${PILL[cur]}">${cur}</span><br>`;
+  return `${pill}<select class="small" style="margin-top:4px;font-size:12px;padding:4px 6px" onchange="onStatusChange('${id}', this.value)">${opts}</select>`;
+}
+window._metaCache = {};
+function onStatusChange(id, val){
+  if(val==="—") return;
+  setStatus(id, window._metaCache[id]||{}, val);
+  // re-render the visible table's status cell pill by refreshing current results is heavy; update stats only
+  renderStats();
+}
+
+/* ================= TAB 1: DC LICENSES ================= */
+const DC_URL = "https://maps2.dcgis.dc.gov/dcgis/rest/services/FEEDS/DCRA/FeatureServer/0/query";
+const RENTAL_ACTIVITIES = ["One Family Rental","Two Family Rental","Apartment","Short Term Rental","Vacation Rental","Cooperative Association"];
+
+document.getElementById("dcLoad").addEventListener("click", loadDC);
+async function loadDC(){
+  const btn = document.getElementById("dcLoad"), msg = document.getElementById("dcMsg"),
+        out = document.getElementById("dcResults");
+  const days = +document.getElementById("dcDays").value;
+  const filter = document.getElementById("dcFilter").value.trim().toLowerCase();
+  const hideRentals = document.getElementById("dcHideRentals").checked;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Pulling…'; hideMsg(msg);
+  try{
+    const since = new Date(Date.now() - days*864e5).toISOString().slice(0,10);
+    const params = new URLSearchParams({
+      where: `INITIALISSUEDATE >= TIMESTAMP '${since} 00:00:00' AND LICENSESTATUS IN ('Active','Open','Pending')`,
+      outFields: "CUSTOMERNUMBER,ENTITYNAME,ENTITYTRADENAME,PRIMARYACTIVITY,BUSINESSACTIVITY,PREMISEADDRESS,INITIALISSUEDATE,BUSINESSOWNERFIRSTNAME,BUSINESSOWNERLASTNAME,WARD,PREMISEINDC",
+      orderByFields: "INITIALISSUEDATE DESC",
+      resultRecordCount: "800", returnGeometry: "false", f: "json",
+    });
+    const r = await fetch(DC_URL + "?" + params);
+    const d = await r.json();
+    if(d.error) throw new Error(d.error.message || "API error");
+    let rows = (d.features||[]).map(f=>f.attributes);
+    if(hideRentals) rows = rows.filter(a=>!RENTAL_ACTIVITIES.includes(a.PRIMARYACTIVITY));
+    if(filter) rows = rows.filter(a=>
+      ((a.PRIMARYACTIVITY||"")+" "+(a.BUSINESSACTIVITY||"")+" "+(a.ENTITYTRADENAME||a.ENTITYNAME||"")).toLowerCase().includes(filter));
+    // de-dup by customer number
+    const seen = new Set();
+    rows = rows.filter(a=>{ const k=a.CUSTOMERNUMBER; if(seen.has(k)) return false; seen.add(k); return true; });
+    if(!rows.length){ out.innerHTML = '<div class="empty">No matches — widen the date range or clear the filter.</div>'; return; }
+    showMsg(msg, `${rows.length} newly licensed businesses. Sorted newest first — the fresher the license, the less competition for their attention.`, "info");
+    out.innerHTML = `<table><tr><th>Business</th><th>Activity</th><th>Address</th><th>Licensed</th><th>Status</th><th>Actions</th></tr>` +
+      rows.map(a=>{
+        const name = a.ENTITYTRADENAME || a.ENTITYNAME || "(unnamed)";
+        const owner = [a.BUSINESSOWNERFIRSTNAME, a.BUSINESSOWNERLASTNAME].filter(Boolean).join(" ");
+        const id = "dc_" + a.CUSTOMERNUMBER;
+        const meta = {name, category:a.PRIMARYACTIVITY||"", address:a.PREMISEADDRESS||"", phone:"", owner, source:"DC license "+fmtDate(a.INITIALISSUEDATE), kind:"newbiz"};
+        window._metaCache[id] = meta;
+        return `<tr>
+          <td><div class="biz">${esc(name)}</div>${owner?`<div class="sub">Owner: ${esc(owner)}</div>`:""}</td>
+          <td>${esc(a.PRIMARYACTIVITY||"")}<div class="sub">${esc(a.BUSINESSACTIVITY||"")}</div></td>
+          <td class="sub">${esc(a.PREMISEADDRESS||"")}${a.WARD?`<br>Ward ${esc(a.WARD)}`:""}</td>
+          <td>${a.INITIALISSUEDATE?fmtDate(a.INITIALISSUEDATE):""}</td>
+          <td>${statusCell(id, meta)}</td>
+          <td><div class="rowactions">
+            <a class="btn secondary small" target="_blank" href="${googleLink(name,'Washington DC')}">🔎 Check</a>
+            <button class="btn small" onclick="openOutreach('${id}')">✉ Outreach</button>
+          </div></td></tr>`;
+      }).join("") + "</table>";
+  }catch(e){
+    showMsg(msg, "Couldn't reach the DC open-data API: " + e.message + " — try again in a minute.", "err");
+  }finally{
+    btn.disabled = false; btn.textContent = "Pull live leads";
+  }
+}
+
+/* ================= TAB 2: OSM NO-WEBSITE ================= */
+const BBOX = { // south,west,north,east
+  dc:      "38.80,-77.12,39.00,-76.90",
+  arlalex: "38.79,-77.20,38.93,-77.03",
+  fairfax: "38.70,-77.40,38.95,-77.15",
+  moco:    "38.95,-77.25,39.12,-76.95",
+  pg:      "38.80,-77.00,39.05,-76.75",
+  loudoun: "38.95,-77.60,39.15,-77.35",
+};
+const AREA_LABEL = {dc:"Washington, DC",arlalex:"Arlington/Alexandria, VA",fairfax:"Fairfax County, VA",moco:"Montgomery County, MD",pg:"Prince George's County, MD",loudoun:"Loudoun County, VA"};
+const CATS = {
+  food:    {label:"Restaurant / café", sels:['node["amenity"~"^(restaurant|cafe|fast_food)$"]','way["amenity"~"^(restaurant|cafe|fast_food)$"]']},
+  beauty:  {label:"Salon / barber",    sels:['node["shop"~"^(hairdresser|beauty)$"]','way["shop"~"^(hairdresser|beauty)$"]']},
+  auto:    {label:"Auto repair",       sels:['node["shop"="car_repair"]','way["shop"="car_repair"]']},
+  health:  {label:"Dental / clinic",   sels:['node["amenity"~"^(dentist|clinic|doctors)$"]','way["amenity"~"^(dentist|clinic|doctors)$"]']},
+  cleaning:{label:"Laundry / cleaning",sels:['node["shop"~"^(laundry|dry_cleaning)$"]','way["shop"~"^(laundry|dry_cleaning)$"]']},
+  fitness: {label:"Gym / fitness",     sels:['node["leisure"="fitness_centre"]','way["leisure"="fitness_centre"]']},
+  retail:  {label:"Retail shop",       sels:['node["shop"~"^(clothes|convenience|gift|florist|furniture|jewelry|shoes|books)$"]','way["shop"~"^(clothes|convenience|gift|florist|furniture|jewelry|shoes|books)$"]']},
+};
+
+document.getElementById("osmLoad").addEventListener("click", loadOSM);
+async function loadOSM(){
+  const btn = document.getElementById("osmLoad"), msg = document.getElementById("osmMsg"),
+        out = document.getElementById("osmResults");
+  const areaKey = document.getElementById("osmArea").value;
+  const catKey = document.getElementById("osmCat").value;
+  const bbox = BBOX[areaKey], cat = CATS[catKey];
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Pulling…'; hideMsg(msg);
+  try{
+    const filters = '["name"][!"website"][!"contact:website"]';
+    const body = `[out:json][timeout:40];(${cat.sels.map(s=>s+filters+`(${bbox});`).join("")});out center 300;`;
+    // public Overpass servers rate-limit; fall through the mirrors until one answers
+    const MIRRORS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
+    let d = null, lastErr = null;
+    for(const url of MIRRORS){
+      try{
+        const r = await fetch(url, {method:"POST", body:"data="+encodeURIComponent(body), headers:{"Content-Type":"application/x-www-form-urlencoded"}});
+        if(!r.ok) throw new Error("HTTP " + r.status);
+        d = await r.json(); break;
+      }catch(e){ lastErr = e; }
+    }
+    if(!d) throw lastErr || new Error("all mirrors failed");
+    let els = (d.elements||[]).filter(e=>e.tags && e.tags.name);
+    // strongest leads first: has phone (real, reachable business) beats no phone
+    els.sort((a,b)=>((b.tags.phone||b.tags["contact:phone"])?1:0)-((a.tags.phone||a.tags["contact:phone"])?1:0));
+    if(!els.length){ out.innerHTML = '<div class="empty">Nothing found for that combo — try another category or area.</div>'; return; }
+    showMsg(msg, `${els.length} businesses with no website on record in ${AREA_LABEL[areaKey]}. Ones with a ☎ number are the strongest leads. Always 🔎 verify before outreach.`, "info");
+    out.innerHTML = `<table><tr><th>Business</th><th>Type</th><th>Location</th><th>Phone</th><th>Status</th><th>Actions</th></tr>` +
+      els.map(e=>{
+        const t = e.tags, name = t.name;
+        const id = "osm_" + e.type + e.id;
+        const addr = [t["addr:housenumber"], t["addr:street"], t["addr:city"]].filter(Boolean).join(" ");
+        const phone = t.phone || t["contact:phone"] || "";
+        const lat = e.lat || (e.center&&e.center.lat), lon = e.lon || (e.center&&e.center.lon);
+        const meta = {name, category:CATS[catKey].label, address:addr||AREA_LABEL[areaKey], phone, owner:"", source:"No website (OSM), "+AREA_LABEL[areaKey], kind:"nosite"};
+        window._metaCache[id] = meta;
+        return `<tr>
+          <td><div class="biz">${esc(name)}</div></td>
+          <td>${esc(t.cuisine ? t.cuisine.replace(/_/g," ") : CATS[catKey].label)}</td>
+          <td class="sub">${esc(addr) || (lat?`<a target="_blank" href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=19/${lat}/${lon}">map pin</a>`:"")}</td>
+          <td>${esc(phone)}</td>
+          <td>${statusCell(id, meta)}</td>
+          <td><div class="rowactions">
+            <a class="btn secondary small" target="_blank" href="${googleLink(name, AREA_LABEL[areaKey])}">🔎 Check</a>
+            <button class="btn small" onclick="openOutreach('${id}')">✉ Outreach</button>
+          </div></td></tr>`;
+      }).join("") + "</table>";
+  }catch(e){
+    showMsg(msg, "Overpass API error: " + e.message + " — it rate-limits; wait ~30s and retry.", "err");
+  }finally{
+    btn.disabled = false; btn.textContent = "Pull live leads";
+  }
+}
+
+/* ================= OUTREACH GENERATOR ================= */
+function openOutreach(id){
+  const m = window._metaCache[id] || leads[id];
+  if(!m) return;
+  upsertLead(id, m); // ensure tracked
+  const first = (m.owner||"").split(" ")[0] || "there";
+  const you = CONFIG.yourName, brand = CONFIG.brandName;
+  const sig = `${you}\n${brand} — ${CONFIG.tagline}\n${CONFIG.email}${CONFIG.phone?" · "+CONFIG.phone:""}${CONFIG.portfolioUrl?"\n"+CONFIG.portfolioUrl:""}`;
+  const isNew = m.kind === "newbiz";
+
+  const emailSubj = isNew
+    ? `Congrats on launching ${m.name} — a quick gift`
+    : `Built a homepage draft for ${m.name}`;
+  const email = isNew
+? `Hi ${first},
+
+Congratulations on getting ${m.name} licensed — welcome to the neighborhood.
+
+I build websites for new DMV businesses, and rather than pitch you, I went ahead and drafted what a homepage for ${m.name} could look like: [DEMO LINK]
+
+No strings attached — if you like it, it can be live within a week, and I handle everything (hosting, updates, Google listing) for one flat monthly rate. If not, no worries at all, and good luck with the launch!
+
+${sig}`
+: `Hi ${first},
+
+I was looking up ${m.name}${m.address?` on ${m.address.split(",")[0]}`:""} and noticed there's no website when customers search for you — which usually means Google is sending them to a competitor who has one.
+
+So I built a quick draft of what your homepage could look like: [DEMO LINK]
+
+If you like it, it can be live in a week — I handle hosting, updates, and your Google Business profile for one flat monthly rate. If it's not for you, keep the design with my compliments.
+
+${sig}`;
+
+  const sms = `Hi${m.owner?" "+first:""}, this is ${you} — local web designer. I made a free homepage mockup for ${m.name}: [DEMO LINK]. If you like it I can have it live in a week. No pressure either way!`;
+
+  const walkin = `"Hi, is the owner around? … I'm ${you}, I build websites for ${m.category||"local"} businesses around here. I actually made a mockup of what a site for ${m.name} could look like — can I show you on my phone? Takes 30 seconds."
+(Show demo. Then:) "If you like it, it's live in a week and I handle everything for ${CONFIG.priceCare} — no big upfront invoice, and you can text me directly whenever you need a change."`;
+
+  document.getElementById("mTitle").textContent = m.name;
+  document.getElementById("mSub").textContent = [m.category, m.address, m.phone, m.source].filter(Boolean).join(" · ");
+  const mailto = `mailto:?subject=${encodeURIComponent(emailSubj)}&body=${encodeURIComponent(email)}`;
+  document.getElementById("mBody").innerHTML = `
+    <div class="msg info show" style="margin-bottom:16px">Step 1: build the demo first (a one-page mockup — takes minutes with AI help). Replace [DEMO LINK] before sending. Demo-first outreach converts 3–5× better than pitching.</div>
+    ${tmplBlock("Email — subject", emailSubj)}
+    ${tmplBlock("Email — body", email)}
+    ${tmplBlock("Text message", sms)}
+    ${tmplBlock("Walk-in script", walkin)}
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <a class="btn" href="${mailto}">Open in Mail</a>
+      <button class="btn secondary" onclick="markContacted('${id}')">Mark as Contacted</button>
+    </div>`;
+  document.getElementById("overlay").classList.add("open");
+}
+function tmplBlock(title, text){
+  const b64 = btoa(unescape(encodeURIComponent(text)));
+  return `<div class="tmpl"><div class="tmpl-head"><h3>${title}</h3>
+    <button class="btn secondary small" onclick="copyB64(this,'${b64}')">Copy</button></div>
+    <pre>${esc(text)}</pre></div>`;
+}
+function copyB64(btn, b64){
+  navigator.clipboard.writeText(decodeURIComponent(escape(atob(b64)))).then(()=>{
+    btn.textContent = "✓ Copied"; setTimeout(()=>btn.textContent="Copy", 1500);
+  });
+}
+function markContacted(id){
+  setStatus(id, window._metaCache[id]||{}, "Contacted");
+  closeModal();
+}
+function closeModal(){ document.getElementById("overlay").classList.remove("open"); }
+document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
+
+/* ================= PIPELINE ================= */
+function renderPipeline(){
+  const k = document.getElementById("kanban");
+  const byStage = {};
+  STAGES.forEach(s=>byStage[s]=[]);
+  Object.entries(leads).forEach(([id,l])=>{ if(byStage[l.status]) byStage[l.status].push([id,l]); });
+  k.innerHTML = STAGES.map(stage=>{
+    const cards = byStage[stage]
+      .sort((a,b)=>(b[1].statusAt||b[1].savedAt||0)-(a[1].statusAt||a[1].savedAt||0))
+      .map(([id,l])=>{
+        const overdue = stage==="Contacted" && l.statusAt && (Date.now()-l.statusAt > 5*864e5);
+        window._metaCache[id] = window._metaCache[id] || l;
+        return `<div class="kcard"><b>${esc(l.name||id)}</b>
+          <div class="sub">${esc(l.category||"")}${l.phone?" · "+esc(l.phone):""}</div>
+          <div class="sub">${esc(l.source||"")}</div>
+          ${overdue?'<div class="due">⚠ 5+ days — follow up!</div>':""}
+          <div class="rowactions" style="margin-top:6px">
+            <button class="btn secondary small" onclick="openOutreach('${id}')">✉</button>
+            <a class="btn secondary small" target="_blank" href="${googleLink(l.name||"","DMV")}">🔎</a>
+            <select style="font-size:11.5px;padding:3px 5px" onchange="setStatus('${id}', null, this.value)">
+              ${STAGES.map(s=>`<option ${s===stage?"selected":""}>${s}</option>`).join("")}
+            </select>
+          </div></div>`;
+      }).join("");
+    return `<div class="kcol"><h3>${stage} <span>${byStage[stage].length}</span></h3>${cards||'<div class="sub" style="text-align:center;padding:14px 0">—</div>'}</div>`;
+  }).join("");
+}
+document.getElementById("exportCsv").addEventListener("click", ()=>{
+  const rows = [["Name","Status","Category","Address","Phone","Owner","Source","Notes","Saved"]];
+  Object.values(leads).forEach(l=>rows.push([l.name,l.status,l.category,l.address,l.phone,l.owner,l.source,l.notes,l.savedAt?new Date(l.savedAt).toISOString().slice(0,10):""]));
+  const csv = rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download = "dmv-leads-" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+});
+document.getElementById("clearDead").addEventListener("click", ()=>{
+  Object.keys(leads).forEach(id=>{ if(leads[id].status==="Dead") delete leads[id]; });
+  saveLeads(); renderPipeline();
+});
+
+renderStats();
+</script>
+</body>
+</html>
