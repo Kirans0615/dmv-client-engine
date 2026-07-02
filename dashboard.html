@@ -286,7 +286,11 @@
       <div class="field"><label for="msPhotos">Photos (optional, up to 3 — used in the design)</label><input type="file" id="msPhotos" accept="image/*" multiple></div>
       <div class="field"><label for="msStyle">Style hints (optional)</label><input type="text" id="msStyle" placeholder="warm, modern, bold…" style="width:170px"></div>
       <button class="btn" id="msGenerate"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate mockup</button>
+      <button class="btn secondary" id="msCopyCC" title="No API key needed — runs on your Claude Code Max plan">Copy as Claude Code command</button>
     </div>
+    <p class="note" style="margin-top:-6px"><b>No API key?</b> "Copy as Claude Code command" packages this brief as a <span style="font-family:var(--mono)">/mockup</span> command —
+    paste it into Claude Code (included in your Max plan, no extra cost) and it designs, builds, and publishes the mockup for you.
+    Put any logo/photos in a folder and mention the folder path in the brief. The in-browser Generate button needs an Anthropic API key (billed per use).</p>
 
     <div class="msg" id="msMsg"></div>
     <div id="msProgress" style="display:none;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px"></div>
@@ -818,6 +822,17 @@ async function msGenerate(){
     btn.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate mockup';
   }
 }
+
+document.getElementById("msCopyCC").addEventListener("click", ()=>{
+  const msg = document.getElementById("msMsg");
+  const v = id => document.getElementById(id).value.trim();
+  if(!v("msName")){ showMsg(msg, "Fill in at least the business name first.", "err"); return; }
+  const cmd = "/mockup " + [v("msName"), v("msType"), v("msLoc"), v("msContact"), v("msDesc"), v("msFeatures"), v("msStyle")]
+    .map(s=>s||"—").join(" | ");
+  navigator.clipboard.writeText(cmd).then(()=>{
+    showMsg(msg, "Copied! Paste it into Claude Code. If you have a logo/photos, add the folder path at the end of the command.", "info");
+  });
+});
 
 document.getElementById("msDownload").addEventListener("click", ()=>{
   if(!msMockup) return;

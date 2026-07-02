@@ -12,7 +12,9 @@ A two-sided client acquisition system for a DMV-area web designer:
 
 Generates a client-ready website mockup with Claude and publishes it to GitHub Pages in one click — the engine behind the demo-first outreach strategy. Enter a brief (name, type, description, requested features), optionally a logo + up to 3 photos (Claude matches the logo's palette and uses the photos in the design), and it streams back a complete single-file site built to a baked-in design system (distinctive typography, accessible contrast, scroll animations, mobile-first, conversion-focused sections chosen per business type). Preview in-tab, then Publish creates the repo, pushes `index.html` + assets, enables Pages, waits for the build, and files the mockup under Completed Sites.
 
-One-time setup in the tab's "Keys & model" panel: an Anthropic API key ([console.anthropic.com](https://console.anthropic.com)) and a fine-grained GitHub token with Administration + Contents + Pages read/write. Keys live only in your browser's localStorage. Default model is Claude Opus 4.8; Fable 5 (with automatic Opus fallback on refusals) and Sonnet 5 are selectable. A full generation costs roughly $0.50–$2 in API usage depending on model and length.
+**Two ways to run it:**
+- **Free with a Claude Max plan (recommended):** fill in the brief and click **Copy as Claude Code command** — it packages everything as a `/mockup …` command. Paste that into Claude Code (the `/mockup` command lives at `~/.claude/commands/mockup.md`) and Claude Code designs, builds, publishes to GitHub Pages, and verifies the live URL. No API key, no per-use cost.
+- **In-browser (needs an Anthropic API key):** the Generate button calls the API directly. One-time setup in the "Keys & model" panel: an Anthropic API key ([console.anthropic.com](https://console.anthropic.com), billed per use — roughly $0.50–$2 per mockup) and a fine-grained GitHub token with Administration + Contents + Pages read/write. Keys live only in your browser's localStorage. Default model Claude Opus 4.8; Fable 5 (with automatic Opus fallback on refusals) and Sonnet 5 selectable.
 
 ## Data sources (all free, no API keys)
 
