@@ -17,12 +17,17 @@ A two-sided client acquisition system for a DMV-area web designer:
 
 Pipeline data is stored in the browser's `localStorage`. Export CSV weekly as backup — clearing browser data wipes the pipeline.
 
-## First-time setup (10 minutes)
+## Zero setup required
 
-1. Edit `config.js`: your brand name, phone, portfolio URL, Calendly.
-2. Create a free form at [formspree.io](https://formspree.io), paste the form ID into `formspreeId`. (Until then the form falls back to opening the visitor's email app.)
-3. Deploy `index.html` + `config.js` anywhere static (GitHub Pages / Vercel — same as your other sites). Keep `dashboard.html` local or deploy it too; it's `noindex` and harmless if found, but your pipeline stays in whichever browser you use it in.
-4. Buy a real domain — a `.com` beats `github.io` for trust with owners.
+Both pages work by double-clicking them — no server, no accounts, no build step:
+
+- **Dashboard:** open `dashboard.html` in your browser and pull leads immediately.
+- **Marketing site:** open `index.html` to preview. The contact form works out of the box: it opens the visitor's email app pre-filled to you.
+
+Optional upgrades, whenever you feel like it (all in `config.js`):
+- Add your phone / portfolio / Calendly links.
+- Swap the mailto form for a real one: free form at [formspree.io](https://formspree.io), paste the ID into `formspreeId`.
+- Deploy `index.html` + `config.js` to GitHub Pages / Vercel and put a real `.com` on it — that's when the marketing site starts earning inbound leads. `dashboard.html` can stay local (it's `noindex` either way; the pipeline lives in whichever browser you use).
 
 ## The weekly playbook (~3 hours total)
 
