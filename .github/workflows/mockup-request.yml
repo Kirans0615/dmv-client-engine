@@ -24,7 +24,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
-          claude_args: "--dangerously-skip-permissions"
+          claude_args: "--dangerously-skip-permissions --model claude-sonnet-5"
           prompt: |
             You are an elite web designer-developer producing a client-ready website mockup that must feel custom-made, expensive, and specific to the business — never like a template. Work autonomously to completion.
 
@@ -35,7 +35,8 @@ jobs:
             If the brief names an assets folder (mockup-requests/…), those files are in the checked-out repo: a file named logo.* is the logo (extract its palette and build the color system around it); others are photos — use them all meaningfully.
 
             IMAGERY — make it look like a real photographer shot it (unless the brief says "Stock imagery: no"):
-            When the brief provides no photos (or too few), source REAL photography — never AI-generated imagery, never obvious clip-art:
+            FIRST check the pre-vetted library in the checked-out repo at stock/ — folders are named by business category and every photo in them is already approved (real, professional, license-safe). If a folder fits this business, copy 2–4 of its photos into your assets/ and skip live searching entirely, or search only for ONE business-specific extra (e.g. the signature dish). Kick off any live downloads in the background with `curl ... &` on your very first tool call and draft the HTML while they arrive.
+            When the library doesn't cover it and the brief provides no photos, source REAL photography — never AI-generated imagery, never obvious clip-art:
             1. If the PEXELS_API_KEY env var is non-empty, use the Pexels API (header "Authorization: $PEXELS_API_KEY"): GET https://api.pexels.com/v1/search?query=<specific query>&per_page=8&orientation=landscape for 2–4 concrete queries tied to the business (e.g. "pupusas griddle", "barber fade haircut", "cozy cafe interior"). Download the src.large2x of promising candidates. AND source one hero background video: GET https://api.pexels.com/videos/search?query=…&per_page=6, pick an HD mp4 under 8MB that fits the brand, use it as a muted looping autoplay playsinline hero background with a poster image and the text-over-imagery scrim contract below; pause it under prefers-reduced-motion. Pexels requires no attribution. If no key is set, the Ken Burns hero motion below is the substitute for video.
             2. Otherwise use keyless sources: Openverse (GET https://api.openverse.org/v1/images/?q=<query>&license=cc0,pdm,by&size=large&per_page=8) and Wikimedia Commons (commons.wikimedia.org API, namespace 6 search with iiurlwidth=1600). Prefer CC0/public domain; CC-BY is fine but must be credited — add a small "Photo credits" line in the footer naming the photographers.
             3. VET every downloaded image by actually viewing it with the Read tool: keep only real photographs that are relevant, professional, well-lit, watermark-free, text-free, and not AI-generated-looking. Reject and re-search freely — 3 great photos beat 6 mediocre ones.
@@ -53,14 +54,14 @@ jobs:
 
             SELF-REVIEW (one fast pass, before publishing): Chrome is preinstalled. Render and screenshot the finished file — `google-chrome --headless=new --disable-gpu --window-size=1440,2400 --screenshot=/tmp/desktop.png file:///tmp/site/index.html` and again with --window-size=390,1600 for mobile — then VIEW both screenshots and fix what you see: text over imagery that's hard to read, broken/overflowing layout, images that failed to load, cramped mobile spacing. One fix round, re-screenshot to confirm, then ship. Do not loop further.
 
-            PACE: work briskly — target ~10 minutes end to end. Limit stock sourcing to ≤6 downloads / 2–4 keepers, one search retry max per query, one self-review fix round. Prefer decisive choices over exploration.
+            PACE: speed is a feature — target ~6 minutes end to end. Use the stock/ library instead of live searches whenever possible; if searching live, ≤4 downloads / 2–3 keepers, one retry max. One self-review fix round only. Write the HTML in one decisive pass — no rewrites, no exploring alternatives.
 
             PUBLISH (the MOCKUP_PAT env var is a GitHub token with repo-creation rights; gh is installed):
             1. cd /tmp/site && git init -b main && git add -A && git commit -m "Mockup"
             2. export GH_TOKEN="$MOCKUP_PAT"; SLUG="<business-name-slug>-mockup"; gh repo create "$SLUG" --public --source=. --push (on name collision append a random 3-digit number)
             3. gh api -X POST repos/${{ github.repository_owner }}/$SLUG/pages -f "source[branch]=main" -f "source[path]=/" (ignore a 409)
-            4. Poll gh api repos/${{ github.repository_owner }}/$SLUG/pages/builds/latest --jq .status until "built", then curl the live URL until HTTP 200 (keep trying for up to 3 minutes — first deploys propagate slowly).
-            5. Comment on issue #${{ github.event.issue.number }} in ${{ github.repository }} with exactly this format on the first line: "✅ Mockup live: https://<owner>.github.io/<slug>/" followed by one sentence describing the design direction. Then close the issue.
+            4. Wait only until gh api repos/${{ github.repository_owner }}/$SLUG/pages/builds/latest --jq .status reports "built" (check every 10s, give up waiting after 90s — do NOT poll the live URL; the CDN propagates on its own).
+            5. Immediately comment on issue #${{ github.event.issue.number }} in ${{ github.repository }} with exactly this format on the first line: "✅ Mockup live: https://<owner>.github.io/<slug>/" followed by one sentence describing the design direction. Then close the issue.
             If anything fails unrecoverably, comment "❌ Mockup failed: <reason>" on the issue so the dashboard stops waiting.
         env:
           MOCKUP_PAT: ${{ secrets.MOCKUP_PAT }}
