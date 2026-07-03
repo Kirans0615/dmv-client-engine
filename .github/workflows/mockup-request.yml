@@ -60,7 +60,7 @@ jobs:
             1. cd /tmp/site && git init -b main && git add -A && git commit -m "Mockup"
             2. export GH_TOKEN="$MOCKUP_PAT"; SLUG="<business-name-slug>-mockup"; gh repo create "$SLUG" --public --source=. --push (on name collision append a random 3-digit number)
             3. gh api -X POST repos/${{ github.repository_owner }}/$SLUG/pages -f "source[branch]=main" -f "source[path]=/" (ignore a 409)
-            4. Wait only until gh api repos/${{ github.repository_owner }}/$SLUG/pages/builds/latest --jq .status reports "built" (check every 10s, give up waiting after 90s — do NOT poll the live URL; the CDN propagates on its own).
+            4. Wait only until gh api repos/${{ github.repository_owner }}/$SLUG/pages/builds/latest --jq .status reports "built" (check every 10s). If it is still not "built" after 60s, the first build sometimes wedges — force a fresh one with gh api -X POST repos/${{ github.repository_owner }}/$SLUG/pages/builds and wait up to 60s more. Then move on regardless (the CDN propagates on its own; do NOT poll the live URL).
             5. Immediately comment on issue #${{ github.event.issue.number }} in ${{ github.repository }} with exactly this format on the first line: "✅ Mockup live: https://<owner>.github.io/<slug>/" followed by one sentence describing the design direction. Then close the issue.
             If anything fails unrecoverably, comment "❌ Mockup failed: <reason>" on the issue so the dashboard stops waiting.
         env:
