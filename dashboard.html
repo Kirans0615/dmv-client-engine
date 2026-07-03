@@ -283,6 +283,7 @@
     <div class="controls">
       <div class="field"><label for="msLogo">Logo (optional — Claude matches its colors)</label><input type="file" id="msLogo" accept="image/*"></div>
       <div class="field"><label for="msPhotos">Photos (optional, up to 3 — used in the design)</label><input type="file" id="msPhotos" accept="image/*" multiple></div>
+      <label class="checkbox" title="Claude searches real stock photography (and hero video when available), reviews each image, and uses only professional, relevant shots"><input type="checkbox" id="msStock" checked> Add real stock photos/video</label>
       <div class="field"><label for="msStyle">Style hints (optional)</label><input type="text" id="msStyle" placeholder="warm, modern, bold…" style="width:170px"></div>
       <button class="btn" id="msGenerateFree"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand"/></svg>Generate &amp; publish (free — Max plan)</button>
       <button class="btn secondary" id="msGenerate" title="Runs in this browser against the Anthropic API — billed per use">Generate in-browser (API key)</button>
@@ -848,7 +849,7 @@ document.getElementById("msGenerateFree").addEventListener("click", async ()=>{
     prog.textContent = "Filing the request…";
     const r = await fetch(MS_PROXY, {method:"POST", headers:{"content-type":"application/json"},
       body: JSON.stringify({name, type, loc:v("msLoc"), contact:v("msContact"), desc:v("msDesc"),
-        features:v("msFeatures"), style:v("msStyle"), assets})});
+        features:v("msFeatures"), style:v("msStyle"), stock:document.getElementById("msStock").checked, assets})});
     const sub = await r.json().catch(()=>({}));
     if(!r.ok || !sub.issue) throw new Error(sub.error || ("submit failed (HTTP " + r.status + ")"));
     const issueNum = sub.issue;

@@ -34,7 +34,15 @@ jobs:
             ---
             If the brief names an assets folder (mockup-requests/…), those files are in the checked-out repo: a file named logo.* is the logo (extract its palette and build the color system around it); others are photos — use them all meaningfully.
 
-            BUILD a single-file website in a NEW directory /tmp/site: index.html (all CSS/JS inline) plus an assets/ folder with copies of any provided images, referenced by relative path. Also add an empty .nojekyll file.
+            IMAGERY — make it look like a real photographer shot it (unless the brief says "Stock imagery: no"):
+            When the brief provides no photos (or too few), source REAL photography — never AI-generated imagery, never obvious clip-art:
+            1. If the PEXELS_API_KEY env var is non-empty, use the Pexels API (header "Authorization: $PEXELS_API_KEY"): GET https://api.pexels.com/v1/search?query=<specific query>&per_page=8&orientation=landscape for 2–4 concrete queries tied to the business (e.g. "pupusas griddle", "barber fade haircut", "cozy cafe interior"). Download the src.large2x of promising candidates. ALSO consider one hero background video: GET https://api.pexels.com/videos/search?query=…&per_page=5, pick an HD mp4 file under 8MB, use it as a muted looping autoplay hero background with a poster image, a dark overlay for text contrast, and paused under prefers-reduced-motion. Pexels requires no attribution.
+            2. Otherwise use keyless sources: Openverse (GET https://api.openverse.org/v1/images/?q=<query>&license=cc0,pdm,by&size=large&per_page=8) and Wikimedia Commons (commons.wikimedia.org API, namespace 6 search with iiurlwidth=1600). Prefer CC0/public domain; CC-BY is fine but must be credited — add a small "Photo credits" line in the footer naming the photographers.
+            3. VET every downloaded image by actually viewing it with the Read tool: keep only real photographs that are relevant, professional, well-lit, watermark-free, text-free, and not AI-generated-looking. Reject and re-search freely — 3 great photos beat 6 mediocre ones.
+            4. Compress before committing: ImageMagick is installed — `convert in.jpg -resize 1600x -quality 82 out.jpg`; each image ≤400KB, video ≤8MB, whole repo ≤15MB.
+            5. Grade everything cohesively in CSS (one consistent overlay/treatment across photos) so mixed sources read as one brand shoot. Photos provided in the brief always take priority; sourced ones supplement.
+
+            BUILD a single-file website in a NEW directory /tmp/site: index.html (all CSS/JS inline) plus an assets/ folder with copies of any provided images (and the sourced stock files), referenced by relative path. Also add an empty .nojekyll file.
             Design bar: NEVER use generic AI aesthetics (no Inter/Roboto/Arial/system fonts, no purple gradients, no cookie-cutter layouts). Distinctive Google Fonts pairing, cohesive palette from the industry/logo, CSS custom properties with a 4/8px rhythm, body ≥16px, contrast ≥4.5:1, focus-visible states, semantic HTML, alt text. IntersectionObserver reveal-on-scroll (150–400ms, staggered) with prefers-reduced-motion respected; sticky nav; working accessible mobile hamburger; fluid clamp() type; no horizontal scroll. Benefit-led hero (never "Welcome to X"), 4–7 sections chosen for THIS business type, 2–3 plausible first-name testimonials, story section from the brief, footer with the provided contact info and a final CTA. Add requested features AND the ones you judge right for the business. Forms are visually complete but use mailto:/tel:. Real specific copy, zero lorem ipsum. Include <title>, meta description, and the footer line: "Website mockup by Kiran Sen · kirans0615@gmail.com".
 
             PUBLISH (the MOCKUP_PAT env var is a GitHub token with repo-creation rights; gh is installed):
@@ -46,3 +54,4 @@ jobs:
             If anything fails unrecoverably, comment "❌ Mockup failed: <reason>" on the issue so the dashboard stops waiting.
         env:
           MOCKUP_PAT: ${{ secrets.MOCKUP_PAT }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}

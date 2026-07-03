@@ -79,6 +79,7 @@ export default async function handler(req, res) {
         assetPaths.length
           ? `Assets folder: mockup-requests/${reqId}/ (${assetPaths.length} file(s); logo.png is the logo if present)`
           : "No images provided.",
+        b.stock === false ? "Stock imagery: no — design without stock photos." : "Stock imagery: yes — source real photos (and a hero video if available).",
       ].filter(Boolean).join("\n");
       const issue = await gh(`/repos/${REPO}/issues`, {
         method: "POST",
