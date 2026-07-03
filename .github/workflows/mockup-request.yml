@@ -55,3 +55,13 @@ jobs:
         env:
           MOCKUP_PAT: ${{ secrets.MOCKUP_PAT }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      - name: Guarantee a result comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=${{ github.event.issue.number }}
+          R=${{ github.repository }}
+          if ! gh api repos/$R/issues/$N/comments --jq '.[].body' | grep -qE "✅ Mockup live:|❌ Mockup failed"; then
+            gh issue comment $N -R $R -b "❌ Mockup failed: the run ended without reporting a result. It may still have published — check https://github.com/${{ github.repository_owner }}?tab=repositories for a new repo — or just submit the request again."
+          fi
